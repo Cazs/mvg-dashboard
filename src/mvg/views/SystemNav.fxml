@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane style="-fx-background-color: rgba(0,0,0,0);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mvg.controllers.NavController">
+   <children>
+      <BorderPane styleClass="nav">
+         <left>
+            <VBox fx:id="menu_container" minWidth="200.0" style="-fx-background-color: rgba(0,0,0,.5); -fx-border-radius: 45px;" visible="false" BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets left="130.0" />
+               </BorderPane.margin>
+               <children>
+                  <Hyperlink onMouseClicked="#showEnquiries" text="Enquiries">
+                     <VBox.margin>
+                        <Insets top="100.0" />
+                     </VBox.margin>
+                  </Hyperlink>
+                  <Hyperlink text="Quotes" />
+                  <Hyperlink text="Trips" />
+                  <Hyperlink text="Invoices" />
+               </children>
+            </VBox>
+         </left>
+         <StackPane.margin>
+            <Insets />
+         </StackPane.margin>
+      </BorderPane>
+      <BorderPane styleClass="sys-nav" stylesheets="@../styles/home.css">
+          <bottom>
+              <BorderPane maxHeight="80.0" style="-fx-border-insets: -50 -10 0 -10;" BorderPane.alignment="CENTER">
+               <center>
+                      <HBox alignment="CENTER" BorderPane.alignment="CENTER">
+                          <children>
+                        <VBox alignment="CENTER">
+                           <children>
+                                    <Label fx:id="company_name" alignment="CENTER" contentDisplay="CENTER" text="MVG Reception" textFill="WHITE">
+                                        <font>
+                                            <Font size="30.0" />
+                                        </font>
+                                    </Label>
+                                    <Label fx:id="lblScreen" alignment="CENTER" contentDisplay="CENTER" text="" textFill="WHITE">
+                                        <font>
+                                            <Font size="24.0" />
+                                        </font>
+                                    </Label>
+                           </children>
+                        </VBox>
+                          </children>
+                      </HBox>
+               </center>
+               <right>
+                        <HBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
+                     <children>
+                              <ImageView fx:id="btnBack" fitHeight="60.0" fitWidth="60.0" onMouseClicked="#previousScreen" pickOnBounds="true" preserveRatio="true" styleClass="btnPrev" />
+                              <ImageView fx:id="btnNext" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="btnNext" />
+                              <ImageView fitHeight="60.0" fitWidth="60.0" onMouseClicked="#showMain" pickOnBounds="true" preserveRatio="true" styleClass="btnHome">
+                           <image>
+                              <Image url="@../gfx/home_black.png" />
+                           </image>
+                        </ImageView>
+                     </children>
+                        </HBox>
+               </right>
+               <left>
+                  <VBox BorderPane.alignment="CENTER">
+                     <children>
+                            <HBox alignment="CENTER_LEFT">
+                                <children>
+                                    <ImageView fx:id="img_logo" fitHeight="70.0" fitWidth="120.0" pickOnBounds="true" preserveRatio="true">
+                                        <image>
+                                            <Image url="@../gfx/logo.png" />
+                                        </image>
+                                        <HBox.margin>
+                                            <Insets left="10.0" />
+                                        </HBox.margin>
+                                    </ImageView>
+                                      <ImageView fx:id="img_profile" fitHeight="60.0" fitWidth="60.0" onMouseClicked="#showMenu" pickOnBounds="true" preserveRatio="true" styleClass="btnProfile" />
+                                      <Label fx:id="user_name" text="not signed in" textFill="WHITE" HBox.hgrow="ALWAYS">
+                                          <font>
+                                              <Font size="20.0" />
+                                          </font>
+                                          <HBox.margin>
+                                              <Insets right="10.0" />
+                                          </HBox.margin>
+                                      </Label>
+                                </children>
+                            </HBox>
+                     </children>
+                  </VBox>
+               </left>
+              </BorderPane>
+          </bottom>
+         <StackPane.margin>
+            <Insets bottom="100.0" />
+         </StackPane.margin>
+      </BorderPane>
+   </children>
+</StackPane>

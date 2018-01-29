@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.*?>
+<?import javafx.scene.layout.*?>
+
+<Tab fx:id="enquiriesTab" text="Enquires" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mvg.controllers.InquiriesController">
+    <content>
+        <TableView fx:id="tblEnquiries" editable="true" tableMenuButtonVisible="true" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="colId" maxWidth="1.7976931348623157E308" minWidth="80.0" prefWidth="-1.0" text="Quote ID" visible="false">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="_id" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colClient" maxWidth="1.7976931348623157E308" minWidth="70.0" prefWidth="-1.0" text="Client">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="client" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colEnquiry" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Enquiry">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="inquiry" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colAddress" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Pickup Address">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="sitename" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colDestination" maxWidth="1.7976931348623157E308" minWidth="80.0" prefWidth="-1.0" text="Destination Address">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="responsible_person_id" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colTripType" maxWidth="1.7976931348623157E308" minWidth="80.0" prefWidth="-1.0" text="Trip Type">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="trip_type" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colDate" editable="false" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Date Scheduled">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="date_scheduled" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colDateLogged" editable="false" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Date Logged">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="date_logged" />
+                    </cellValueFactory>
+                </TableColumn>
+                <TableColumn fx:id="colCreator" maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" text="Creator" />
+                <TableColumn fx:id="colAction" maxWidth="1.7976931348623157E308" minWidth="280.0" prefWidth="-1.0" text="Action"/>
+                <TableColumn fx:id="colOther" maxWidth="1.7976931348623157E308" minWidth="80.0" prefWidth="-1.0" text="Other" visible="false">
+                    <cellValueFactory>
+                        <PropertyValueFactory property="other" />
+                    </cellValueFactory>
+                </TableColumn>
+            </columns>
+        </TableView>
+    </content>
+</Tab>

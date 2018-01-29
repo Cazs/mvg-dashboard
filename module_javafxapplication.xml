@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_javafxapplication" default="compile.module.javafxapplication">
+  <dirname property="module.javafxapplication.basedir" file="${ant.file.module_javafxapplication}"/>
+  
+  <property name="module.jdk.home.javafxapplication" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.javafxapplication" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.javafxapplication" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.javafxapplication" value="-encoding UTF-8 -source 1.8 -target 1.8 ${compiler.args}"/>
+  
+  <property name="javafxapplication.output.dir" value="${module.javafxapplication.basedir}/out/production/JavaFxApplication"/>
+  <property name="javafxapplication.testoutput.dir" value="${module.javafxapplication.basedir}/out/test/JavaFxApplication"/>
+  
+  <path id="javafxapplication.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="javafxapplication.module.production.classpath">
+    <path refid="${module.jdk.classpath.javafxapplication}"/>
+    <path refid="library.gson-2.8.0.classpath"/>
+    <path refid="library.jfxtras-labs-8.0-r5.classpath"/>
+  </path>
+  
+  <path id="javafxapplication.runtime.production.module.classpath">
+    <pathelement location="${javafxapplication.output.dir}"/>
+    <path refid="library.gson-2.8.0.classpath"/>
+    <path refid="library.jfxtras-labs-8.0-r5.classpath"/>
+  </path>
+  
+  <path id="javafxapplication.module.classpath">
+    <path refid="${module.jdk.classpath.javafxapplication}"/>
+    <pathelement location="${javafxapplication.output.dir}"/>
+    <path refid="library.gson-2.8.0.classpath"/>
+    <path refid="library.jfxtras-labs-8.0-r5.classpath"/>
+  </path>
+  
+  <path id="javafxapplication.runtime.module.classpath">
+    <pathelement location="${javafxapplication.testoutput.dir}"/>
+    <pathelement location="${javafxapplication.output.dir}"/>
+    <path refid="library.gson-2.8.0.classpath"/>
+    <path refid="library.jfxtras-labs-8.0-r5.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.javafxapplication">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.javafxapplication">
+    <patternset refid="excluded.from.module.javafxapplication"/>
+  </patternset>
+  
+  <path id="javafxapplication.module.sourcepath">
+    <dirset dir="${module.javafxapplication.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.javafxapplication" depends="compile.module.javafxapplication.production,compile.module.javafxapplication.tests" description="Compile module JavaFxApplication"/>
+  
+  <target name="compile.module.javafxapplication.production" depends="register.custom.compilers" description="Compile module JavaFxApplication; production classes">
+    <mkdir dir="${javafxapplication.output.dir}"/>
+    <javac2 destdir="${javafxapplication.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.javafxapplication}/javac">
+      <compilerarg line="${compiler.args.javafxapplication}"/>
+      <bootclasspath refid="javafxapplication.module.bootclasspath"/>
+      <classpath refid="javafxapplication.module.production.classpath"/>
+      <src refid="javafxapplication.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.javafxapplication"/>
+    </javac2>
+    
+    <copy todir="${javafxapplication.output.dir}">
+      <fileset dir="${module.javafxapplication.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.javafxapplication.tests" depends="register.custom.compilers,compile.module.javafxapplication.production" description="compile module JavaFxApplication; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.javafxapplication" description="cleanup module">
+    <delete dir="${javafxapplication.output.dir}"/>
+    <delete dir="${javafxapplication.testoutput.dir}"/>
+  </target>
+</project>
