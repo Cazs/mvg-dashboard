@@ -4,7 +4,7 @@
 <?import javafx.scene.control.cell.*?>
 <?import javafx.scene.layout.*?>
 
-<Tab fx:id="enquiriesTab" text="Enquires" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mvg.controllers.InquiriesController">
+<Tab fx:id="enquiriesTab" text="Enquiries" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mvg.controllers.EnquiriesController">
     <content>
         <TableView fx:id="tblEnquiries" editable="true" tableMenuButtonVisible="true" VBox.vgrow="ALWAYS">
             <columns>
@@ -20,7 +20,7 @@
                 </TableColumn>
                 <TableColumn fx:id="colEnquiry" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Enquiry">
                     <cellValueFactory>
-                        <PropertyValueFactory property="inquiry" />
+                        <PropertyValueFactory property="enquiry" />
                     </cellValueFactory>
                 </TableColumn>
                 <TableColumn fx:id="colAddress" maxWidth="1.7976931348623157E308" minWidth="120.0" prefWidth="-1.0" text="Pickup Address">

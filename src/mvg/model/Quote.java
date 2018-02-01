@@ -3,6 +3,7 @@ package mvg.model;
 import mvg.auxilary.Globals;
 import mvg.auxilary.IO;
 import mvg.managers.ClientManager;
+import mvg.managers.EnquiryManager;
 import mvg.managers.UserManager;
 import mvg.managers.QuoteManager;
 import javafx.beans.property.SimpleStringProperty;
@@ -27,6 +28,16 @@ public class Quote extends MVGObject
     private QuoteItem[] resources;
     private int rev_cursor = -1;
     public static final String TAG = "Quote";
+
+    public Enquiry getEnquiry()
+    {
+        HashMap<String, Enquiry> enquiries = EnquiryManager.getInstance().getEnquiries();
+        if(enquiries!=null)
+        {
+            return enquiries.get(getEnquiry_id());
+        } else IO.log(getClass().getName(), IO.TAG_ERROR, "no enquiries were found in database.");
+        return null;
+    }
 
     public String getEnquiry_id()
     {
@@ -266,12 +277,18 @@ public class Quote extends MVGObject
         return new SimpleStringProperty("N/A");
     }
     public StringProperty requestProperty(){return new SimpleStringProperty(request);}
-    private StringProperty statusProperty(){return new SimpleStringProperty(String.valueOf(status));}
+    public StringProperty addressProperty()
+    {
+        if(getEnquiry()!=null)
+            return new SimpleStringProperty(getEnquiry().getPickup_location());
+        else return new SimpleStringProperty("N/A");
+    }
+    public StringProperty statusProperty(){return new SimpleStringProperty(String.valueOf(status));}
     public StringProperty vatProperty()
     {
         return new SimpleStringProperty(String.valueOf(getVat()));
     }
-    private StringProperty account_nameProperty(){return new SimpleStringProperty(getAccount_name());}
+    public StringProperty account_nameProperty(){return new SimpleStringProperty(getAccount_name());}
     public StringProperty parent_idProperty()
     {
         return new SimpleStringProperty(String.valueOf(getParent_id()));

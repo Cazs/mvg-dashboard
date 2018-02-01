@@ -153,11 +153,12 @@ public class User extends MVGObject implements Serializable
 
     public Client getOrganisation()
     {
-        if(getOrganisation_id()!=null)
+        if(getOrganisation_id()==null)
         {
             IO.log(getClass().getName(), IO.TAG_WARN, "user "+getName()+" does not belong to any organisation.");
             return null;
         }
+
         HashMap<String, Client> clients = ClientManager.getInstance().getClients();
         if(clients!=null)
         {

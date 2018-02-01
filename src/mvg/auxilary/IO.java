@@ -4,6 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import mvg.controllers.ScreenController;
 import mvg.managers.ScreenManager;
@@ -17,7 +22,10 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import org.controlsfx.control.Notifications;
 
+import java.awt.*;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Optional;
 
 /**
  * Created by ghost on 2017/01/28.
@@ -28,6 +36,11 @@ public class IO<T extends MVGObject>
     public static final String TAG_INFO = "info";
     public static final String TAG_WARN = "warning";
     public static final String TAG_ERROR = "error";
+    public static final String YES = "Yes";
+    public static final String NO = "No";
+    public static final String OK = "OK";
+    public static final String CANCEL = "Cancel";
+    public static final String STYLES_ROOT_PATH= "styles/";//FadulousBMS.class.getResource("styles/").getPath();
     private static final String TAG = "IO";
     private static IO io = new IO();
     private static ScreenManager screenManager;
@@ -81,6 +94,15 @@ public class IO<T extends MVGObject>
                 System.out.println(String.format("%s> %s: %s", src, tag, msg));
                 break;
         }
+    }
+
+    public static String generateRandomString(int len)
+    {
+        String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        String str="";
+        for(int i=0;i<len;i++)
+            str+=chars.charAt((int)(Math.floor(Math.random()*chars.length())));
+        return str;
     }
 
     public void quickSort(T arr[], int left, int right, String comparator)
@@ -157,6 +179,55 @@ public class IO<T extends MVGObject>
                     break;
             }
         });
+    }
+
+    public static String showConfirm(String title, String message, String... options)
+    {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.initStyle(StageStyle.UTILITY);
+        alert.setTitle("Choose an option");
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+
+        //To make enter key press the actual focused button, not the first one. Just like pressing "space".
+        alert.getDialogPane().addEventFilter(KeyEvent.KEY_PRESSED, event ->
+        {
+            if (event.getCode().equals(KeyCode.ENTER))
+            {
+                event.consume();
+                try
+                {
+                    Robot r = new Robot();
+                    r.keyPress(java.awt.event.KeyEvent.VK_SPACE);
+                    r.keyRelease(java.awt.event.KeyEvent.VK_SPACE);
+                } catch (Exception e)
+                {
+                    IO.log(IO.class.getName(), IO.TAG_ERROR, e.getMessage());
+                }
+            }
+        });
+
+        if (options == null || options.length == 0)
+        {
+            options = new String[]{OK, CANCEL};
+        }
+
+        ArrayList<ButtonType> buttons = new ArrayList<>();
+        for (String option : options)
+        {
+            buttons.add(new ButtonType(option));
+        }
+
+        alert.getButtonTypes().setAll(buttons);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (!result.isPresent())
+        {
+            return CANCEL;
+        } else
+        {
+            return result.get().getText();
+        }
     }
 
     public static void logAndAlert(String title, String msg, String type)

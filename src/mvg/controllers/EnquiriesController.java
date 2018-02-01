@@ -13,28 +13,26 @@ import javafx.scene.layout.Priority;
 import javafx.util.Callback;
 import mvg.auxilary.IO;
 import mvg.managers.*;
-import mvg.managers.InquiryManager;
+import mvg.managers.EnquiryManager;
 import mvg.model.*;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.ResourceBundle;
 
-public class InquiriesController extends ScreenController implements Initializable
+public class EnquiriesController extends ScreenController implements Initializable
 {
     @FXML
-    private TableView<Inquiry> tblEnquiries;
+    private TableView<Enquiry> tblEnquiries;
     @FXML
     private TableColumn colId, colClient, colEnquiry, colAddress,
-            colDestination,colTripType,colDate,colOther,colAction;
+            colDestination,colTripType,colCreator,colDate,colDateLogged,colOther,colAction;
     
     @Override
     public void refreshView()
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading enquiries view..");
-        if( InquiryManager.getInstance().getEnquiries()==null)
+        if( EnquiryManager.getInstance().getEnquiries()==null)
         {
             IO.logAndAlert(getClass().getName(), "no enquiries were found in the database.", IO.TAG_ERROR);
             return;
@@ -47,21 +45,24 @@ public class InquiriesController extends ScreenController implements Initializab
         CustomTableViewControls.makeEditableTableColumn(colAddress, TextFieldTableCell.forTableColumn(), 120, "pickup_location", "/enquiries");
         CustomTableViewControls.makeEditableTableColumn(colDestination, TextFieldTableCell.forTableColumn(), 120, "destination", "/enquiries");
         CustomTableViewControls.makeEditableTableColumn(colTripType, TextFieldTableCell.forTableColumn(), 80, "trip_type", "/enquiries");
+        colCreator.setMinWidth(100);
+        colCreator.setCellValueFactory(new PropertyValueFactory<>("creator"));
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDate, "date_scheduled");
+        CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateLogged, "date_logged", false);
         CustomTableViewControls.makeEditableTableColumn(colOther, TextFieldTableCell.forTableColumn(), 50, "other", "/enquiries");
 
-        ObservableList<Inquiry> lst_enquiries = FXCollections.observableArrayList();
-        lst_enquiries.addAll(InquiryManager.getInstance().getEnquiries().values());
+        ObservableList<Enquiry> lst_enquiries = FXCollections.observableArrayList();
+        lst_enquiries.addAll(EnquiryManager.getInstance().getEnquiries().values());
         tblEnquiries.setItems(lst_enquiries);
 
-        Callback<TableColumn<Inquiry, String>, TableCell<Inquiry, String>> cellFactory
+        Callback<TableColumn<Enquiry, String>, TableCell<Enquiry, String>> cellFactory
                 =
-                new Callback<TableColumn<Inquiry, String>, TableCell<Inquiry, String>>()
+                new Callback<TableColumn<Enquiry, String>, TableCell<Enquiry, String>>()
                 {
                     @Override
-                    public TableCell call(final TableColumn<Inquiry, String> param)
+                    public TableCell call(final TableColumn<Enquiry, String> param)
                     {
-                        final TableCell<Inquiry, String> cell = new TableCell<Inquiry, String>()
+                        final TableCell<Enquiry, String> cell = new TableCell<Enquiry, String>()
                         {
                             final Button btnQuote = new Button("New Quote");
                             final Button btnRemove = new Button("Delete");
@@ -89,23 +90,23 @@ public class InquiriesController extends ScreenController implements Initializab
                                 } else
                                 {
                                     HBox hBox = new HBox(btnQuote, btnRemove);
-                                    Inquiry inquiry = getTableView().getItems().get(getIndex());
+                                    Enquiry enquiry = getTableView().getItems().get(getIndex());
 
                                     btnQuote.setOnAction(event ->
                                     {
-                                        if(inquiry ==null)
+                                        if(enquiry ==null)
                                         {
-                                            IO.logAndAlert("Error", "Inquiry object is not set", IO.TAG_ERROR);
+                                            IO.logAndAlert("Error", "Enquiry object is not set", IO.TAG_ERROR);
                                             return;
                                         }
-                                        if(inquiry.getCreatorUser() ==null)
+                                        if(enquiry.getCreatorUser() ==null)
                                         {
-                                            IO.logAndAlert("Error", "Inquiry creator object is not set", IO.TAG_ERROR);
+                                            IO.logAndAlert("Error", "Enquiry creator object is not set", IO.TAG_ERROR);
                                             return;
                                         }
-                                        if(inquiry.getCreatorUser().getOrganisation() ==null)
+                                        if(enquiry.getCreatorUser().getOrganisation() ==null)
                                         {
-                                            IO.logAndAlert("Error", "Inquiry creator's organisation object is not set", IO.TAG_ERROR);
+                                            IO.logAndAlert("Error", "Enquiry creator's organisation object is not set", IO.TAG_ERROR);
                                             return;
                                         }
                                         if(SessionManager.getInstance().getActive()==null)
@@ -120,13 +121,13 @@ public class InquiriesController extends ScreenController implements Initializab
                                         }
 
                                         Quote quote = new Quote();
-                                        quote.setEnquiry_id(inquiry.get_id());
+                                        quote.setEnquiry_id(enquiry.get_id());
                                         quote.setVat(QuoteManager.VAT);
                                         quote.setStatus(Quote.STATUS_PENDING);
-                                        quote.setAccount_name(inquiry.getCreatorUser().getOrganisation().getAccount_name());
-                                        quote.setRequest(inquiry.getEnquiry());
-                                        quote.setClient_id(inquiry.getCreatorUser().getOrganisation_id());
-                                        quote.setContact_person_id(inquiry.getCreator());
+                                        quote.setAccount_name(enquiry.getCreatorUser().getOrganisation().getAccount_name());
+                                        quote.setRequest(enquiry.getEnquiry());
+                                        quote.setClient_id(enquiry.getCreatorUser().getOrganisation_id());
+                                        quote.setContact_person_id(enquiry.getCreator());
                                         quote.setCreator(SessionManager.getInstance().getActiveUser().getUsr());
                                         quote.setRevision(1.0);
 
@@ -175,7 +176,7 @@ public class InquiriesController extends ScreenController implements Initializab
                                     btnRemove.setOnAction(event ->
                                     {
                                         //Quote quote = getTableView().getItems().get(getIndex());
-                                        getTableView().getItems().remove(inquiry);
+                                        getTableView().getItems().remove(enquiry);
                                         getTableView().refresh();
                                         //TODO: remove from server
                                         //IO.log(getClass().getName(), IO.TAG_INFO, "successfully removed quote: " + quote.get_id());
@@ -197,7 +198,7 @@ public class InquiriesController extends ScreenController implements Initializab
         colAction.setCellFactory(cellFactory);
 
         tblEnquiries.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) ->
-                InquiryManager.getInstance().setSelectedEnquiry(tblEnquiries.getSelectionModel().getSelectedItem()));
+                EnquiryManager.getInstance().setSelectedEnquiry(tblEnquiries.getSelectionModel().getSelectedItem()));
     }
 
     @Override
@@ -206,7 +207,8 @@ public class InquiriesController extends ScreenController implements Initializab
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading enquiries data model..");
         try
         {
-            InquiryManager.getInstance().reloadDataFromServer();
+            ClientManager.getInstance().reloadDataFromServer();
+            EnquiryManager.getInstance().reloadDataFromServer();
         } catch (ClassNotFoundException e)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());

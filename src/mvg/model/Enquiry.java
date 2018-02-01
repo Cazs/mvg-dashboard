@@ -13,7 +13,7 @@ import mvg.auxilary.IO;
  *
  * @author ghost
  */
-public class Inquiry extends MVGObject
+public class Enquiry extends MVGObject
 {
     private String enquiry;
     private String pickup_location;
@@ -21,7 +21,7 @@ public class Inquiry extends MVGObject
     private String trip_type;
     private String comments;
     private long date_scheduled;
-    public static final String TAG = "Inquiry";
+    public static final String TAG = "Enquiry";
 
     public String getEnquiry()
     {
@@ -82,28 +82,27 @@ public class Inquiry extends MVGObject
 
     //Properties
 
-    private StringProperty client_nameProperty()
+    public StringProperty client_nameProperty()
     {
         if(getCreatorUser()!=null)
         {
             if (getCreatorUser().getOrganisation() != null)
                 return new SimpleStringProperty(getCreatorUser().getOrganisation().getClient_name());
             else {
-                IO.log(getClass().getName(), IO.TAG_ERROR, "could not get Inquiry creator's organisation.");
+                IO.log(getClass().getName(), IO.TAG_ERROR, "could not get Enquiry creator's organisation.");
                 return new SimpleStringProperty(getCreator());
             }
         } else
         {
-          IO.log(getClass().getName(), IO.TAG_ERROR, "could not get Inquiry creator user object");
+          IO.log(getClass().getName(), IO.TAG_ERROR, "could not get Enquiry creator user object");
           return new SimpleStringProperty(getCreator());
         }
     }
-    private StringProperty enquiryProperty(){return new SimpleStringProperty(enquiry);}
-    private StringProperty pickup_locationProperty(){return new SimpleStringProperty(pickup_location);}
-    private StringProperty destinationProperty(){return new SimpleStringProperty(String.valueOf(destination));}
-    private StringProperty trip_typeProperty(){return new SimpleStringProperty(String.valueOf(trip_type));}
-    private StringProperty commentsProperty(){return new SimpleStringProperty(comments);}
-    private StringProperty date_scheduledProperty(){return new SimpleStringProperty(String.valueOf(getDate_scheduled()));}
+    public StringProperty enquiryProperty(){return new SimpleStringProperty(enquiry);}
+    public StringProperty pickup_locationProperty(){return new SimpleStringProperty(pickup_location);}
+    public StringProperty destinationProperty(){return new SimpleStringProperty(String.valueOf(destination));}
+    public StringProperty trip_typeProperty(){return new SimpleStringProperty(String.valueOf(trip_type));}
+    public StringProperty commentsProperty(){return new SimpleStringProperty(comments);}
 
     @Override
     public void parse(String var, Object val)

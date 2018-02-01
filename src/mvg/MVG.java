@@ -33,13 +33,12 @@ public class MVG extends Application
         stage.setOnCloseRequest(event ->
         {
             //TODO: fix this!!! no swing!!
-            int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to exit?");
-            if(result==JOptionPane.OK_OPTION)
+            //int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to exit?");
+            if(IO.showConfirm("Confirm Exit", "Are you sure you want to quit?", IO.YES, IO.NO).equals(IO.YES))
             {
                 stage.close();
                 System.exit(0);
-            }
-            else  event.consume();
+            } else  event.consume();
         });
         //grid = new GridDisplay(2, 4);
         //screen_manager = new ScreenManager();

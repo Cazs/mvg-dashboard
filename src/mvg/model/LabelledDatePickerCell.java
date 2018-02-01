@@ -45,12 +45,15 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
         {
             if(!newValue)//if lost focus
             {
-                long date_epoch = datePicker.getValue().atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
+                if(datePicker.getValue()!=null)//if datepicker value is not null
+                {
+                    long date_epoch = datePicker.getValue().atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
 
-                if(date_epoch>0)
-                    setGraphic(datePicker);
-                else setGraphic(label);
-                getTableView().refresh();
+                    if (date_epoch > 0)
+                        setGraphic(datePicker);
+                    else setGraphic(label);
+                    getTableView().refresh();
+                } else setGraphic(label);
             }
         });
     }

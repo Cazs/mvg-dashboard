@@ -205,6 +205,8 @@ public class NotificationManager extends MVGObjectManager
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
                     {
                         IO.logAndAlert("Success", "Successfully sent notification to "+client.getClient_name()+"!", IO.TAG_INFO);
+                        //reload model manager
+                        reloadDataFromServer();
                         if(callback!=null)
                             callback.call(null);
                     } else
@@ -213,6 +215,9 @@ public class NotificationManager extends MVGObjectManager
                     }
                     connection.disconnect();
                 }
+            } catch (ClassNotFoundException e)
+            {
+                IO.log(TAG, IO.TAG_ERROR, e.getMessage());
             } catch (IOException e)
             {
                 IO.log(TAG, IO.TAG_ERROR, e.getMessage());

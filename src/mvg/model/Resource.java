@@ -235,6 +235,12 @@ Resource extends MVGObject implements Serializable
     }
 
     @Override
+    public String toString()
+    {
+        return getResource_name();
+    }
+
+    @Override
     public String apiEndpoint()
     {
         return "/resources";

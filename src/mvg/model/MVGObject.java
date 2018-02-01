@@ -52,7 +52,7 @@ public abstract class MVGObject implements Serializable
 
     public StringProperty creatorProperty()
     {
-        return new SimpleStringProperty(String.valueOf(getCreator()));
+        return new SimpleStringProperty(String.valueOf(getCreatorUser().getName()));
     }
 
     public String getCreator()

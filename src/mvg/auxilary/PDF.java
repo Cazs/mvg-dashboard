@@ -171,11 +171,11 @@ public class PDF
             Doc documentToBePrinted = new SimpleDoc(new ByteArrayInputStream(byteStream), docType, null);
             printJob.print(documentToBePrinted, null);
         }else{
-            IO.logAndAlert("Print Job", "Print job cancelled.", IO.TAG_INFO);
+            IO.logAndAlert("Print Trip", "Print job cancelled.", IO.TAG_INFO);
         }
     }
 
-    public static String createEnquiryPDF(Inquiry inquiry) throws IOException
+    public static String createEnquiryPDF(Enquiry enquiry) throws IOException
     {
         //create PDF output directory
         if(new File("out/pdf/").mkdirs())
@@ -216,14 +216,14 @@ public class PDF
         contents.setFont(font, 12);
         line_pos-=10;
         //Heading text
-        addTextToPageStream(contents, "Inquiry", 16,(int)(w/2)-70, line_pos);
+        addTextToPageStream(contents, "Enquiry", 16,(int)(w/2)-70, line_pos);
         line_pos-=LINE_HEIGHT*2;//next 2nd line
 
         addTextToPageStream(contents, "DATE LOGGED: ", 16,10, line_pos);
-        addTextToPageStream(contents, (new SimpleDateFormat("yyyy-MM-dd").format(inquiry.getDate_logged()*1000)), 16,(int)w/2+100, line_pos);
+        addTextToPageStream(contents, (new SimpleDateFormat("yyyy-MM-dd").format(enquiry.getDate_logged()*1000)), 16,(int)w/2+100, line_pos);
         line_pos-=LINE_HEIGHT*2;//next 2nd line
 
-        addTextToPageStream(contents, inquiry.getEnquiry(), PDType1Font.TIMES_ITALIC, 16 ,10, line_pos);
+        addTextToPageStream(contents, enquiry.getEnquiry(), PDType1Font.TIMES_ITALIC, 16 ,10, line_pos);
         line_pos-=LINE_HEIGHT*2;//next 2nd line
 
         //Create column headings
@@ -237,11 +237,11 @@ public class PDF
 
         //int pos = line_pos;
         contents.beginText();
-        addTextToPageStream(contents, String.valueOf(inquiry.getTrip_type()), 14, 10, line_pos);
-        addTextToPageStream(contents, inquiry.getPickup_location(), 12, col_positions[0]+5, line_pos);
-        addTextToPageStream(contents, inquiry.getDestination(), 12, col_positions[1]+5, line_pos);
-        if(inquiry.getDate_scheduled()>0)
-            addTextToPageStream(contents, (new SimpleDateFormat("yyyy-MM-dd").format(inquiry.getDate_scheduled()*1000)), 12, col_positions[2]+5, line_pos);
+        addTextToPageStream(contents, String.valueOf(enquiry.getTrip_type()), 14, 10, line_pos);
+        addTextToPageStream(contents, enquiry.getPickup_location(), 12, col_positions[0]+5, line_pos);
+        addTextToPageStream(contents, enquiry.getDestination(), 12, col_positions[1]+5, line_pos);
+        if(enquiry.getDate_scheduled()>0)
+            addTextToPageStream(contents, (new SimpleDateFormat("yyyy-MM-dd").format(enquiry.getDate_scheduled()*1000)), 12, col_positions[2]+5, line_pos);
         else addTextToPageStream(contents, "N/A", 12, col_positions[2]+5, line_pos);
 
         line_pos-=LINE_HEIGHT*2;//next 2nd line
@@ -262,8 +262,8 @@ public class PDF
         addTextToPageStream(contents, status, 14,100, line_pos);*/
         line_pos-=LINE_HEIGHT*2;//next 2nd line
 
-        if(inquiry.getOther()!=null)
-            addTextToPageStream(contents, inquiry.getOther(), 16, 15, line_pos);
+        if(enquiry.getOther()!=null)
+            addTextToPageStream(contents, enquiry.getOther(), 16, 15, line_pos);
 
         line_pos-=LINE_HEIGHT*3;//next 3rd line
         addTextToPageStream(contents, "Applicant's Signature", 16,10, line_pos);
@@ -280,11 +280,11 @@ public class PDF
         contents.lineTo(320, line_pos+LINE_HEIGHT+5);
         contents.stroke();
 
-        String path = "out/pdf/enquiry_" + inquiry.get_id() + ".pdf";
+        String path = "out/pdf/enquiry_" + enquiry.get_id() + ".pdf";
         int i=1;
         while(new File(path).exists())
         {
-            path = "out/pdf/enquiry_" + inquiry.get_id() + "." + i + ".pdf";
+            path = "out/pdf/enquiry_" + enquiry.get_id() + "." + i + ".pdf";
             i++;
         }
 

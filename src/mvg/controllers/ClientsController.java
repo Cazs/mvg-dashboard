@@ -5,6 +5,7 @@
  */
 package mvg.controllers;
 
+import mvg.MVG;
 import mvg.auxilary.IO;
 import mvg.managers.*;
 import mvg.model.*;
@@ -22,6 +23,7 @@ import javafx.util.Callback;
 import jfxtras.labs.scene.control.radialmenu.RadialMenuItem;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -108,9 +110,46 @@ public class ClientsController extends ScreenController implements Initializable
                                     Client client = getTableView().getItems().get(getIndex());
 
                                     btnNotification.setOnAction(event ->
-                                    {
-                                        NotificationManager.getInstance().newNotificationWindow(client, null);
-                                    });
+                                        NotificationManager.getInstance().newNotificationWindow(client, new Callback()
+                                        {
+                                            @Override
+                                            public Object call(Object arg)
+                                            {
+                                                ScreenManager.getInstance().showLoadingScreen(param ->
+                                                {
+                                                    new Thread(new Runnable()
+                                                    {
+                                                        @Override
+                                                        public void run()
+                                                        {
+                                                            try
+                                                            {
+                                                                //load User data to memory
+                                                                UserManager.getInstance().loadDataFromServer();
+
+                                                                //TODO: set screen to notifications screen
+                                                                if (ScreenManager.getInstance()
+                                                                        .loadScreen(Screens.DASHBOARD
+                                                                                .getScreen(), MVG.class
+                                                                                .getResource("views/" + Screens.DASHBOARD
+                                                                                        .getScreen())))
+                                                                {
+                                                                    ScreenManager.getInstance()
+                                                                            .setScreen(Screens.DASHBOARD.getScreen());
+                                                                } else IO.log(getClass()
+                                                                        .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
+                                                            } catch (IOException e)
+                                                            {
+                                                                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                                                            }
+                                                        }
+                                                    }).start();
+                                                    return null;
+                                                });
+                                                return null;
+                                            }
+                                        })
+                                    );
 
                                     btnRemove.setOnAction(event ->
                                     {

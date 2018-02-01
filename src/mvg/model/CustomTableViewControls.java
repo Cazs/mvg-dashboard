@@ -586,7 +586,7 @@ public class CustomTableViewControls
                         PDF.printPDF(file);
                         IO.log(TAG, IO.TAG_INFO, "Printing: " + filename + " ["+bo.get_id()+"]");
                     }else{
-                        IO.logAndAlert("Print Job", "Could not download file '"+filename+"'", IO.TAG_ERROR);
+                        IO.logAndAlert("Print Trip", "Could not download file '"+filename+"'", IO.TAG_ERROR);
                     }
                 }catch (PrintException e)
                 {

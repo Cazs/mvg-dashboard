@@ -81,6 +81,12 @@ public class Type extends MVGObject implements Serializable
     }
 
     @Override
+    public String toString()
+    {
+        return getType_name();
+    }
+
+    @Override
     public String apiEndpoint()
     {
         return "/resources/types";

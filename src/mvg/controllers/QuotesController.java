@@ -65,15 +65,14 @@ public class QuotesController extends ScreenController implements Initializable
 
         colId.setCellValueFactory(new PropertyValueFactory<>("_id"));
         colClient.setMinWidth(120);
-        //colClient.setCellValueFactory(new PropertyValueFactory<>("client_id"));
-        //colClient.setCellFactory(col -> new ComboBoxTableCell(ClientManager.getInstance().getClients(), "client_id", "/quotes"));
         colClient.setCellValueFactory(new PropertyValueFactory<>("client_name"));
         colContactPerson.setMinWidth(120);
         colContactPerson.setCellValueFactory(new PropertyValueFactory<>("contact_person"));
-        //colContactPerson.setCellFactory(col -> new ComboBoxTableCell(UserManager.getInstance().getUsers(), "contact_person_id", "usr"));
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateGenerated, "date_logged", false);
-        CustomTableViewControls.makeEditableTableColumn(colRequest, TextFieldTableCell.forTableColumn(), 100, "request", "/quotes");
-        CustomTableViewControls.makeEditableTableColumn(colSitename, TextFieldTableCell.forTableColumn(), 100, "sitename", "/quotes");
+        colRequest.setMinWidth(120);
+        colRequest.setCellValueFactory(new PropertyValueFactory<>("request"));
+        colSitename.setMinWidth(120);
+        colSitename.setCellValueFactory(new PropertyValueFactory<>("address"));
         CustomTableViewControls.makeDynamicToggleButtonTableColumn(colStatus,100, "status", new String[]{"0","PENDING","1","APPROVED"}, false,"/quotes");
         colCreator.setCellValueFactory(new PropertyValueFactory<>("creator"));
         colRevision.setCellValueFactory(new PropertyValueFactory<>("revision"));
@@ -300,6 +299,7 @@ public class QuotesController extends ScreenController implements Initializable
         UserManager.getInstance().loadDataFromServer();
         ClientManager.getInstance().loadDataFromServer();
         ResourceManager.getInstance().loadDataFromServer();
+        EnquiryManager.getInstance().loadDataFromServer();
         QuoteManager.getInstance().loadDataFromServer();
     }
 

@@ -1208,25 +1208,22 @@ public abstract class QuoteController extends ScreenController implements Initia
                 Quote selected = QuoteManager.getInstance().getSelectedQuote();
                 if(selected!=null)
                 {
-                    if(selected.getStatus()>Quote.STATUS_PENDING)
+                    if(selected.getStatus()==Quote.STATUS_APPROVED)
                     {
-                        /*Job job = new Job();
-                        job.setQuote_id(selected.get_id());
-                        job.setCreator(smgr.getActiveUser().getUsr());
-                        /*if(JobManager.getInstance().getJobs()!=null)
-                            job.setJob_number(JobManager.getInstance().getJobs().length);
-                        else job.setJob_number(0);*
-                        String new_job_id = JobManager.getInstance().createNewJob(job, null);
-                        if (new_job_id != null)
+                        Trip trip = new Trip();
+                        trip.setQuote_id(selected.get_id());
+                        trip.setCreator(smgr.getActiveUser().getUsr());
+                        String new_trip_id = TripManager.getInstance().createNewTrip(trip, null);
+                        if (new_trip_id != null)
                         {
-                            IO.logAndAlert("Success", "Successfully created a new job.", IO.TAG_INFO);
+                            IO.logAndAlert("Success", "Successfully created a new trip.", IO.TAG_INFO);
                             try
                             {
-                                JobManager.getInstance().reloadDataFromServer();
-                                if (JobManager.getInstance().getJobs() != null)
+                                TripManager.getInstance().reloadDataFromServer();
+                                if (TripManager.getInstance().getTrips() != null)
                                 {
-                                    JobManager.getInstance()
-                                            .setSelected(JobManager.getInstance().getJobs().get(new_job_id));
+                                    TripManager.getInstance()
+                                            .setSelected(TripManager.getInstance().getTrips().get(new_trip_id));
 
                                     ScreenManager.getInstance().showLoadingScreen(param ->
                                     {
@@ -1237,15 +1234,16 @@ public abstract class QuoteController extends ScreenController implements Initia
                                             {
                                                 try
                                                 {
+                                                    //TODO: load trips screen
                                                     if (ScreenManager.getInstance()
-                                                            .loadScreen(Screens.VIEW_JOB.getScreen(), mvg.MVG.class.getResource("views/" + Screens.VIEW_JOB
+                                                            .loadScreen(Screens.DASHBOARD.getScreen(), mvg.MVG.class.getResource("views/" + Screens.DASHBOARD
                                                                             .getScreen())))
                                                     {
                                                         Platform.runLater(() -> ScreenManager.getInstance()
-                                                                .setScreen(Screens.VIEW_JOB.getScreen()));
+                                                                .setScreen(Screens.DASHBOARD.getScreen()));
                                                     }
                                                     else IO.log(getClass()
-                                                            .getName(), IO.TAG_ERROR, "could not load job viewer screen.");
+                                                            .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
                                                 } catch (IOException e)
                                                 {
                                                     IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
@@ -1255,7 +1253,7 @@ public abstract class QuoteController extends ScreenController implements Initia
                                         return null;
                                     });
                                 }
-                                else IO.logAndAlert("Error", "Could not find any jobs in the database.", IO.TAG_INFO);
+                                else IO.logAndAlert("Error", "Could not find any trips in the database.", IO.TAG_INFO);
                             } catch (MalformedURLException ex)
                             {
                                 IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
@@ -1269,11 +1267,11 @@ public abstract class QuoteController extends ScreenController implements Initia
                                 IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
                                 IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
                             }
-                        } else IO.logAndAlert("Error", "Could not successfully create a new job.", IO.TAG_ERROR);*/
+                        } else IO.logAndAlert("Error", "Could not successfully create a new trip.", IO.TAG_ERROR);
                     } else IO.logAndAlert("Error", "Quote has not been approved yet.", IO.TAG_ERROR);
-                }else IO.logAndAlert("Cannot Create Job", "Cannot create job because the selected quote is invalid.", IO.TAG_ERROR);
-            }else IO.showMessage("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-        }else IO.showMessage("Session Expired", "No active sessions.", IO.TAG_ERROR);
+                }else IO.logAndAlert("Error: Cannot Create Trip", "Cannot create trip because the selected quote is invalid.", IO.TAG_ERROR);
+            }else IO.showMessage("Error: Session Expired", "Active session has expired.", IO.TAG_ERROR);
+        }else IO.showMessage("Error: Session Expired", "No active sessions.", IO.TAG_ERROR);
     }
 
     @FXML

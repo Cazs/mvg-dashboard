@@ -25,11 +25,11 @@ import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 import mvg.MVG;
 import mvg.auxilary.*;
-import mvg.managers.InquiryManager;
+import mvg.managers.EnquiryManager;
 import mvg.managers.ScreenManager;
 import mvg.managers.SessionManager;
 import mvg.managers.SlideshowManager;
-import mvg.model.Inquiry;
+import mvg.model.Enquiry;
 import mvg.model.Screens;
 import java.io.File;
 import java.io.IOException;
@@ -260,7 +260,7 @@ public class HomescreenController extends ScreenController implements Initializa
     @FXML
     public void submitEnquiry()
     {
-        if(!Validators.isValidNode(txtEnquiry, "Invalid Inquiry", 5, "^.*(?=.{5,}).*"))//"please enter a valid inquiry"
+        if(!Validators.isValidNode(txtEnquiry, "Invalid Enquiry", 5, "^.*(?=.{5,}).*"))//"please enter a valid enquiry"
             return;
         if(!Validators.isValidNode(dateScheduled, (dateScheduled.getValue()==null?"":String.valueOf(dateScheduled.getValue())), "^.*(?=.{1,}).*"))
             return;
@@ -273,20 +273,20 @@ public class HomescreenController extends ScreenController implements Initializa
         if(!Validators.isValidNode(txtTripType, "Invalid Trip Type", 1, "^.*(?=.{1,}).*"))//"please enter a valid trip type"
             return;
 
-        Inquiry inquiry = new Inquiry();
-        inquiry.setEnquiry(txtEnquiry.getText());
-        inquiry.setComments(txtComments.getText());
-        inquiry.setPickup_location(txtAddress.getText());
-        inquiry.setDestination(txtDestination.getText());
-        inquiry.setDate_scheduled(dateScheduled.getValue().atStartOfDay(ZoneId.systemDefault()).toEpochSecond());
-        inquiry.setTrip_type(txtTripType.getText());
-        inquiry.setCreator(SessionManager.getInstance().getActive().getUsername());
+        Enquiry enquiry = new Enquiry();
+        enquiry.setEnquiry(txtEnquiry.getText());
+        enquiry.setComments(txtComments.getText());
+        enquiry.setPickup_location(txtAddress.getText());
+        enquiry.setDestination(txtDestination.getText());
+        enquiry.setDate_scheduled(dateScheduled.getValue().atStartOfDay(ZoneId.systemDefault()).toEpochSecond());
+        enquiry.setTrip_type(txtTripType.getText());
+        enquiry.setCreator(SessionManager.getInstance().getActive().getUsername());
 
         try
         {
-            InquiryManager.getInstance().createEnquiry(inquiry, new_enquiry_id ->
+            EnquiryManager.getInstance().createEnquiry(enquiry, new_enquiry_id ->
             {
-                IO.logAndAlert("Success", "Created Inquiry ["+new_enquiry_id+"].", IO.TAG_INFO);
+                IO.logAndAlert("Success", "Created Enquiry ["+new_enquiry_id+"].", IO.TAG_INFO);
                 return null;
             });
         } catch (IOException e)

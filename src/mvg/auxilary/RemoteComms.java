@@ -167,14 +167,17 @@ public class RemoteComms
             while ((line=in.readLine())!=null)
                 response += line;
             //Log.d(TAG,response);
-        }else
+        } else
         {
             response="";
-            BufferedReader in = new BufferedReader(new InputStreamReader(httpConn.getErrorStream()));
-            String line="";
-            int read=0;
-            while ((line=in.readLine())!=null)
-                response += line;
+            if(httpConn.getErrorStream()!=null)
+            {
+                BufferedReader in = new BufferedReader(new InputStreamReader(httpConn.getErrorStream()));
+                String line = "";
+                int read = 0;
+                while ((line = in.readLine()) != null)
+                    response += line;
+            } else response = String.valueOf(httpConn.getResponseCode());
         }
 
         IO.log(TAG, IO.TAG_INFO, "GET response> " + response + "\n");
