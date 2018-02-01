@@ -194,8 +194,10 @@ public class NewClientController extends ScreenController implements Initializab
                     {
                         ClientManager.getInstance().reloadDataFromServer();
                         ClientManager.getInstance().setSelected(client);
-                        IO.logAndAlert("New Client Creation Success", "Successfully created new Client "+new_client_id, IO.TAG_INFO);
+                        IO.logAndAlert("Success", "Successfully created a new client: "+client.getClient_name(), IO.TAG_INFO);
                         itemsModified = false;
+                        //reload client data
+                        ClientManager.getInstance().reloadDataFromServer();
                     }catch (MalformedURLException ex)
                     {
                         IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());

@@ -281,7 +281,7 @@ public class ClientManager extends MVGObjectManager
                 {
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
                     {
-                        IO.logAndAlert("Success", "Successfully created a new client!", IO.TAG_INFO);
+                        IO.logAndAlert("Success", "Successfully created a new client ["+client.getClient_name()+"]!", IO.TAG_INFO);
                         callback.call(null);
                     }else{
                         IO.logAndAlert( "ERROR_" + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);

@@ -59,8 +59,8 @@ public class IO<T extends MVGObject>
             {
                 //get filename with no extension from src param and apply it on status bar - then refresh it.
                 if (src.contains("."))
-                    current_screen.refreshStatusBar(src.substring(src.lastIndexOf(".") + 1) + "> " + tag + ":: " + msg);
-                else current_screen.refreshStatusBar(src + "> " + tag + ":: " + msg);
+                    current_screen.refreshStatusBar(src.substring(src.lastIndexOf(".") + 1) + "> " + tag + ":: " + msg.replaceAll("\n",""));
+                else current_screen.refreshStatusBar(src + "> " + tag + ":: " + msg.replaceAll("\n",""));
             }else System.err.println(getInstance().getClass().getName() + "> error: focused screen is null.");
         }
         switch (tag.toLowerCase())

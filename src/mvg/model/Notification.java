@@ -3,8 +3,10 @@ package mvg.model;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import mvg.auxilary.IO;
+import mvg.managers.ClientManager;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 /**
  * Created by ghost on 2017/02/24.
@@ -15,7 +17,7 @@ public class Notification extends MVGObject implements Serializable
     private String message;
     private String client_id;
     private int status;
-    public static final String TAG = "FileMetadata";
+    public static final String TAG = "Notification";
 
     public Notification(String subject, String message, String client_id)
     {
@@ -45,6 +47,16 @@ public class Notification extends MVGObject implements Serializable
         this.message = message;
     }
 
+    public Client getClient()
+    {
+        HashMap<String, Client> clients = ClientManager.getInstance().getClients();
+        if(clients!=null)
+        {
+            return clients.get(client_id);
+        }else IO.log(getClass().getName(), IO.TAG_ERROR, "no clients were found in database.");
+        return null;
+    }
+
     public String getClient_id()
     {
         return client_id;
@@ -64,6 +76,18 @@ public class Notification extends MVGObject implements Serializable
     {
         this.status = status;
     }
+
+    //Properties
+    public StringProperty client_idProperty(){return new SimpleStringProperty(client_id);}
+    public StringProperty client_nameProperty()
+    {
+        if(getClient()!=null)
+            return new SimpleStringProperty(getClient().getClient_name());
+        return new SimpleStringProperty("N/A");
+    }
+    public StringProperty subjectProperty(){return new SimpleStringProperty(subject);}
+    public StringProperty messageProperty(){return new SimpleStringProperty(message);}
+    private StringProperty statusProperty(){return new SimpleStringProperty(String.valueOf(status));}
 
     @Override
     public void parse(String var, Object val)

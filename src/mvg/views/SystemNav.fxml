@@ -39,7 +39,7 @@
                           <children>
                         <VBox alignment="CENTER">
                            <children>
-                                    <Label fx:id="company_name" alignment="CENTER" contentDisplay="CENTER" text="MVG Reception" textFill="WHITE">
+                                    <Label fx:id="company_name" alignment="CENTER" contentDisplay="CENTER" text="MVG Dashboard" textFill="WHITE">
                                         <font>
                                             <Font size="30.0" />
                                         </font>

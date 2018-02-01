@@ -30,7 +30,6 @@ public class NotificationManager extends MVGObjectManager
 {
     private HashMap<String, Notification> notifications;
     private Notification selected;
-    private TableView tblNotifications;
     private Gson gson;
     private static NotificationManager notificationManager = new NotificationManager();
     public static final String TAG = "NotificationManager";
@@ -200,7 +199,7 @@ public class NotificationManager extends MVGObjectManager
                 headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
                 headers.add(new AbstractMap.SimpleEntry<>("Cookie", SessionManager.getInstance().getActive().getSessionId()));
 
-                HttpURLConnection connection = RemoteComms.putJSON("/notifications", client.asJSONString(), headers);
+                HttpURLConnection connection = RemoteComms.putJSON("/notifications", notification.asJSONString(), headers);
                 if(connection!=null)
                 {
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
