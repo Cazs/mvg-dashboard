@@ -5,11 +5,14 @@
  */
 package mvg.model;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.*;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import mvg.auxilary.Globals;
 import mvg.auxilary.IO;
 import mvg.managers.QuoteManager;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+
 import java.util.ArrayList;
 
 /**
@@ -105,6 +108,11 @@ public class Trip extends MVGObject
     }
 
     //Properties
+
+    public SimpleLongProperty date_scheduledProperty()
+    {
+        return new SimpleLongProperty(getDate_scheduled());
+    }
 
     public StringProperty quote_idProperty()
     {
@@ -225,6 +233,9 @@ public class Trip extends MVGObject
                 return getStatus();
             case "date_assigned":
                 return getDate_assigned();
+            case "date_scheduled":
+                IO.log(getClass().getName(), IO.TAG_INFO, ">>>>>>getting date_scheduled");
+                return getDate_scheduled();
             case "assigned_users":
                 return getAssigned_users();
         }

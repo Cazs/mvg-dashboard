@@ -69,7 +69,7 @@ public class TripsController extends ScreenController implements Initializable
         CustomTableViewControls.makeDynamicToggleButtonTableColumn(colStatus,90, "status", new String[]{"0","PENDING","1","APPROVED"}, false,"/trips");
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateLogged, "date_logged", false);
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateAssigned, "date_assigned");
-        CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateScheduled, "date_scheduled");
+        CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateScheduled, "date_scheduled", false);
         colCreator.setCellValueFactory(new PropertyValueFactory<>("creator_name"));
         colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
 

@@ -73,7 +73,7 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
             {
                 updateItem(newVal.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), isEmpty());
                 if (datePicker.isFocused() || datePicker.isShowing())
-                    commitEdit(newVal.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()*1000);
+                    commitEdit(newVal.atStartOfDay(ZoneId.systemDefault()).toEpochSecond());
             }else IO.log(getClass().getName(), IO.TAG_ERROR, "new date picker value is null.");
         });
     }
