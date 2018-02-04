@@ -182,7 +182,7 @@ public class TripsController extends ScreenController implements Initializable
 
         colAction.setCellValueFactory(new PropertyValueFactory<>(""));
         colAction.setCellFactory(cellFactory);
-        colAction.setMinWidth(1000);
+        colAction.setMinWidth(500);
 
         tblTrips.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) ->
                 TripManager.getInstance().setSelected(tblTrips.getSelectionModel().getSelectedItem()));

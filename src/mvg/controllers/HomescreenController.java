@@ -260,6 +260,11 @@ public class HomescreenController extends ScreenController implements Initializa
     @FXML
     public void submitEnquiry()
     {
+        if(SessionManager.getInstance().getActiveUser()!=null)
+        {
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.", IO.TAG_ERROR);
+            return;
+        }
         if(!Validators.isValidNode(txtEnquiry, "Invalid Enquiry", 5, "^.*(?=.{5,}).*"))//"please enter a valid enquiry"
             return;
         if(!Validators.isValidNode(dateScheduled, (dateScheduled.getValue()==null?"":String.valueOf(dateScheduled.getValue())), "^.*(?=.{1,}).*"))
@@ -275,6 +280,7 @@ public class HomescreenController extends ScreenController implements Initializa
 
         Enquiry enquiry = new Enquiry();
         enquiry.setEnquiry(txtEnquiry.getText());
+        enquiry.setClient_id(SessionManager.getInstance().getActiveUser().getOrganisation_id());
         enquiry.setComments(txtComments.getText());
         enquiry.setPickup_location(txtAddress.getText());
         enquiry.setDestination(txtDestination.getText());
