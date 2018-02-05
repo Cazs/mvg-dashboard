@@ -281,6 +281,16 @@ public class Quote extends MVGObject
     {
         if(getEnquiry()!=null)
             return new SimpleStringProperty(getEnquiry().getPickup_location());
+        else if(getEnquiry_id()!=null)
+            return new SimpleStringProperty(getEnquiry_id());
+        else return new SimpleStringProperty("N/A");
+    }
+    public StringProperty destinationProperty()
+    {
+        if(getEnquiry()!=null)
+            return new SimpleStringProperty(getEnquiry().getDestination());
+        else if(getEnquiry_id()!=null)
+            return new SimpleStringProperty(getEnquiry_id());
         else return new SimpleStringProperty("N/A");
     }
     public StringProperty statusProperty(){return new SimpleStringProperty(String.valueOf(status));}

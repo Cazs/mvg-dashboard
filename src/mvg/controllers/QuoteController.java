@@ -1101,6 +1101,7 @@ public abstract class QuoteController extends ScreenController implements Initia
             quote.setAccount_name(cbxAccount.getValue());
             quote.setCreator(SessionManager.getInstance().getActive().getUsername());
             quote.setRevision(1.0);//set default revision number
+            quote.setEnquiry_id(selected.getEnquiry_id());
             //get selected Quote's siblings sorted by revision number
             Quote[] quote_revisions = selected.getSortedSiblings("revision");
             if(quote_revisions!=null)
