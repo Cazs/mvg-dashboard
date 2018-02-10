@@ -1,26 +1,25 @@
 package mvg.controllers;
 
-import javafx.event.EventHandler;
+import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.stage.Window;
 import mvg.MVG;
+import mvg.auxilary.Globals;
 import mvg.auxilary.IO;
 import mvg.managers.ScreenManager;
 import mvg.managers.SessionManager;
 import mvg.managers.UserManager;
 import mvg.model.Screens;
 import mvg.model.User;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
 import org.controlsfx.control.PopOver;
 
-import javax.imageio.ImageIO;
-import java.io.File;
+import java.awt.*;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -28,34 +27,62 @@ import java.util.ResourceBundle;
 public class NavController extends ScreenController implements Initializable
 {
     @FXML
-    private Label lblScreen;
+    private Label lblScreen,company_name;
     @FXML
     private ImageView btnBack,btnNext,btnHome,img_logo, img_profile;
+    public static int FONT_SIZE_MULTIPLIER = 50;
+    public static boolean first_run=true;
 
     @Override
     public void refreshView()
     {
-        if (SessionManager.getInstance().getActive() != null)
+        if(!first_run)
         {
-            if (!SessionManager.getInstance().getActive().isExpired())
+            if (SessionManager.getInstance().getActive() != null)
             {
-                //Render user name
-                User e = SessionManager.getInstance().getActiveUser();
-                if(e!=null)
-                    this.getUserNameLabel().setText(e.getName());
-                else IO.log(getClass().getName(), IO.TAG_ERROR, "No active sessions.");
-            } else
+                if (!SessionManager.getInstance().getActive().isExpired())
+                {
+                    //Render user name
+                    User user= SessionManager.getInstance().getActiveUser();
+                    if (user != null)
+                        this.getUserNameLabel().setText(user.getName());
+                    else IO.log(getClass().getName(), IO.TAG_ERROR, "No active sessions.");
+                }
+                else
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, "No active sessions were found!");
+                    return;
+                }
+            }
+            else
             {
-                IO.log(getClass().getName(), IO.TAG_ERROR, "No active sessions were found!");
+                IO.log(getClass().getName(), IO.TAG_ERROR, "No valid sessions were found!");
                 return;
             }
+            //Render current screen name
+            lblScreen.setText(ScreenManager.getInstance().peekScreenControllers().getKey());
+
+            //Render company name
+            company_name.setText(Globals.COMPANY.getValue() + " " + Globals.APP_NAME.getValue());
         } else
         {
-            IO.log(getClass().getName(), IO.TAG_ERROR, "No valid sessions were found!");
-            return;
+            IO.log(getClass().getName(), IO.TAG_INFO, "first run, ignoring session checks.");
+            first_run = false;
         }
-        //Render current screen name
-        lblScreen.setText(ScreenManager.getInstance().peekScreenControllers().getKey());
+
+        if(ScreenManager.getInstance().getScene()!=null)
+        {
+            Window app_window = ScreenManager.getInstance().getScene().getWindow();
+            //resize app title on screen resize
+            app_window.widthProperty().addListener((observable, oldValue, newValue) ->
+                    company_name.setFont(Font.font(newValue.intValue() / FONT_SIZE_MULTIPLIER)));
+
+            //trigger resize handler to resize font every time the nav is reloaded, yes it is hacky but works ;)
+            app_window.setWidth(
+                    app_window.getWidth() + 1 >= GraphicsEnvironment.getLocalGraphicsEnvironment()
+                            .getDefaultScreenDevice().getDisplayMode().getWidth() - 60 ?
+                            app_window.getWidth() - 1 : app_window.getWidth() + 1);
+        }
 
         img_profile.setOnMouseClicked(event ->
         {
@@ -66,40 +93,38 @@ public class NavController extends ScreenController implements Initializable
 
             Button btnDash = new Button("Dashboard");
             btnDash.setOnAction(evt ->
-            {
-                ScreenManager.getInstance().showLoadingScreen(param ->
-                {
-                    new Thread(new Runnable()
+                    ScreenManager.getInstance().showLoadingScreen(param ->
                     {
-                        @Override
-                        public void run()
+                        new Thread(new Runnable()
                         {
-                            try
+                            @Override
+                            public void run()
                             {
-                                popOver.hide();
-                                //load User data to memory
-                                UserManager.getInstance().loadDataFromServer();
-
-                                //TODO: set screen to notifications screen
-                                if (ScreenManager.getInstance()
-                                        .loadScreen(Screens.DASHBOARD
-                                                .getScreen(), MVG.class
-                                                .getResource("views/" + Screens.DASHBOARD
-                                                        .getScreen())))
+                                try
                                 {
-                                    ScreenManager.getInstance()
-                                            .setScreen(Screens.DASHBOARD.getScreen());
-                                } else IO.log(getClass()
-                                        .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
-                            } catch (IOException e)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                                    popOver.hide();
+                                    //load User data to memory
+                                    UserManager.getInstance().initialize();
+
+                                    //TODO: set screen to notifications screen
+                                    if (ScreenManager.getInstance()
+                                            .loadScreen(Screens.DASHBOARD
+                                                    .getScreen(), MVG.class
+                                                    .getResource("views/" + Screens.DASHBOARD
+                                                            .getScreen())))
+                                    {
+                                        ScreenManager.getInstance()
+                                                .setScreen(Screens.DASHBOARD.getScreen());
+                                    } else IO.log(getClass()
+                                            .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
+                                } catch (IOException e)
+                                {
+                                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                                }
                             }
-                        }
-                    }).start();
-                    return null;
-                });
-            });
+                        }).start();
+                        return null;
+                    }));
 
             container.getChildren().add(btnDash);
             //popOver.getRoot().getChildren().add(container);
@@ -115,7 +140,8 @@ public class NavController extends ScreenController implements Initializable
     @Override
     public void initialize(URL location, ResourceBundle resources)
     {
-        ScreenManager.getInstance().setLblScreenName(lblScreen);
-        refreshView();
+        if(ScreenManager.getInstance()!=null)
+            ScreenManager.getInstance().setLblScreenName(lblScreen);
+        Platform.runLater(() -> refreshView());
     }
 }

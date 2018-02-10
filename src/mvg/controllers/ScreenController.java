@@ -5,11 +5,9 @@
  */
 package mvg.controllers;
 
+import jfxtras.labs.scene.control.radialmenu.RadialMenuItem;
 import mvg.MVG;
-import mvg.auxilary.Globals;
-import mvg.auxilary.IO;
-import mvg.auxilary.RemoteComms;
-import mvg.auxilary.Session;
+import mvg.auxilary.*;
 import mvg.exceptions.LoginException;
 import mvg.managers.ScreenManager;
 import mvg.managers.SessionManager;
@@ -77,30 +75,47 @@ public abstract class ScreenController
     }
 
     @FXML
-    public void showLogin()
+    public void forceSynchronise()
+    {
+        refreshModel();
+        refreshView();
+    }
+
+    public static void showLoginScreen()
     {
         try
         {
-            if(ScreenManager.getInstance().loadScreen(Screens.LOGIN.getScreen(),getClass().getResource("../views/"+Screens.LOGIN.getScreen())))
+            if(ScreenManager.getInstance().loadScreen(Screens.LOGIN.getScreen(),ScreenController.class.getResource("../views/"+Screens.LOGIN.getScreen())))
                 ScreenManager.getInstance().setScreen(Screens.LOGIN.getScreen());
-            else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load login screen.");
+            else IO.log(ScreenController.class.getName(), IO.TAG_ERROR, "could not load login screen.");
         } catch (IOException e)
         {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+            IO.log(ScreenController.class.getName(), IO.TAG_ERROR, e.getMessage());
         }
+    }
+
+    @FXML
+    public void showLogin()
+    {
+        showLoginScreen();
     }
 
     @FXML
     public void showMain()
     {
+        showMainScreen();
+    }
+
+    public static void showMainScreen()
+    {
         try
         {
-            if(ScreenManager.getInstance().loadScreen(Screens.HOME.getScreen(),getClass().getResource("../views/"+Screens.HOME.getScreen())))
+            if(ScreenManager.getInstance().loadScreen(Screens.HOME.getScreen(),ScreenManager.class.getResource("../views/"+Screens.HOME.getScreen())))
                 ScreenManager.getInstance().setScreen(Screens.HOME.getScreen());
-            else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load home screen.");
+            else IO.log(ScreenController.class.getName(), IO.TAG_ERROR, "could not load home screen.");
         } catch (IOException e)
         {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+            IO.log(ScreenController.class.getName(), IO.TAG_ERROR, e.getMessage());
         }
     }
 
@@ -117,7 +132,7 @@ public abstract class ScreenController
                     try
                     {
                         //load User data to memory
-                        UserManager.getInstance().loadDataFromServer();
+                        UserManager.getInstance().initialize();
 
                         if (ScreenManager.getInstance().loadScreen(Screens.DASHBOARD.getScreen(), MVG.class.getResource("views/" + Screens.DASHBOARD.getScreen())))
                         {
@@ -150,7 +165,7 @@ public abstract class ScreenController
                     try
                     {
                         //load User data to memory
-                        UserManager.getInstance().loadDataFromServer();
+                        UserManager.getInstance().initialize();
 
                         if (ScreenManager.getInstance().loadScreen(Screens.NEW_CLIENT.getScreen(), MVG.class.getResource("views/" + Screens.NEW_CLIENT.getScreen())))
                         {
@@ -183,7 +198,7 @@ public abstract class ScreenController
                     try
                     {
                         //load User data to memory
-                        UserManager.getInstance().loadDataFromServer();
+                        UserManager.getInstance().initialize();
 
                         if (ScreenManager.getInstance().loadScreen(Screens.NEW_RESOURCE.getScreen(), MVG.class.getResource("views/" + Screens.NEW_RESOURCE.getScreen())))
                         {
@@ -216,7 +231,7 @@ public abstract class ScreenController
                     try
                     {
                         //load User data to memory
-                        UserManager.getInstance().loadDataFromServer();
+                        UserManager.getInstance().initialize();
 
                         if (ScreenManager.getInstance().loadScreen(Screens.NEW_QUOTE.getScreen(), MVG.class.getResource("views/" + Screens.NEW_QUOTE.getScreen())))
                         {
@@ -256,6 +271,17 @@ public abstract class ScreenController
         IO.logAndAlert("Coming Soon", "This feature is currently being implemented.", IO.TAG_INFO);
     }
 
+    public static RadialMenuItem[] getDefaultContextMenu()
+    {
+        RadialMenuItem menuClose = new RadialMenuItemCustom(ScreenManager.MENU_SIZE, "Close", null, null, event -> ScreenManager.getInstance().hideContextMenu());
+        RadialMenuItem menuBack = new RadialMenuItemCustom(ScreenManager.MENU_SIZE, "Back", null, null, event -> prevScreen());
+        RadialMenuItem menuForward = new RadialMenuItemCustom(ScreenManager.MENU_SIZE, "Forward", null, null, event -> showMainScreen());
+        RadialMenuItem menuHome = new RadialMenuItemCustom(ScreenManager.MENU_SIZE, "Home", null, null, event -> showMainScreen());
+        RadialMenuItem menuLogin = new RadialMenuItemCustom(ScreenManager.MENU_SIZE, "Login", null, null, event -> showLoginScreen());
+
+        return new RadialMenuItem[]{menuClose, menuBack, menuForward, menuHome, menuLogin};
+    }
+
     public ImageView getProfileImageView()
     {
         return this.img_profile;
@@ -271,15 +297,20 @@ public abstract class ScreenController
         return this.loading_pane;
     }
 
-    @FXML
-    public void previousScreen()
+    public static void prevScreen()
     {
         try
         {
             ScreenManager.getInstance().setPreviousScreen();
         } catch (IOException e)
         {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+            IO.log(ScreenController.class.getName(), IO.TAG_ERROR, e.getMessage());
         }
+    }
+
+    @FXML
+    public void previousScreen()
+    {
+        prevScreen();
     }
 }

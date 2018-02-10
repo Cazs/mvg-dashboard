@@ -10,7 +10,7 @@ import java.net.URLEncoder;
 /**
  * Created by ghost on 2017/02/03.
  */
-public class TripUser extends MVGObject
+public class TripDriver extends MVGObject
 {
     private String trip_id;
     private String usr;
@@ -96,6 +96,6 @@ public class TripUser extends MVGObject
     @Override
     public String apiEndpoint()
     {
-        return "/trips/users";
+        return "/trips/drivers";
     }
 }

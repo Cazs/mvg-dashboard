@@ -96,6 +96,16 @@
     -fx-image:url("../gfx/key_white.png");
 }
 
+.btnRefresh
+{
+    -fx-image:url("../gfx/refresh.png");
+}
+
+.btnRefresh:hover
+{
+    -fx-image:url("../gfx/refresh_white.png");
+}
+
 .btnBack
 {
     -fx-background-color: rgba(200,0,0,.7);

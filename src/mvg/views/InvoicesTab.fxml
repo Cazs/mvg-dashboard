@@ -1,0 +1,22 @@
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<Tab text="Invoices" fx:id="invoicesTab" fx:controller="mvg.controllers.InvoicesController" xmlns:fx="http://javafx.com/fxml">
+    <content>
+        <TableView fx:id="tblInvoices" editable="true" tableMenuButtonVisible="true" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="colInvoiceId" minWidth="50.0" maxWidth="1.7976931348623157E308" text="Invoice ID"/>
+                <TableColumn fx:id="colTripId" minWidth="50" maxWidth="1.7976931348623157E308" text="Trip ID"/>
+                <TableColumn fx:id="colClient" minWidth="70.0" maxWidth="1.7976931348623157E308" text="Client"/>
+                <TableColumn fx:id="colDateGenerated" editable="false" minWidth="100" maxWidth="1.7976931348623157E308" prefWidth="-1.0" text="Date Generated"/>
+                <TableColumn fx:id="colStatus" maxWidth="1.7976931348623157E308" minWidth="80.0" text="Status" visible="true"/>
+                <TableColumn fx:id="colAccount" maxWidth="1.7976931348623157E308" minWidth="80.0" prefWidth="-1.0" text="Account"/>
+                <TableColumn fx:id="colCreator" minWidth="100" maxWidth="1.7976931348623157E308" text="Creator"/>
+                <TableColumn fx:id="colTotal" maxWidth="1.7976931348623157E308" minWidth="80.0" text="Total"/>
+                <TableColumn fx:id="colReceivable" maxWidth="1.7976931348623157E308" text="Receivable"/>
+                <TableColumn fx:id="colExtra" maxWidth="1.7976931348623157E308" minWidth="80.0" text="Extra" visible="false"/>
+                <TableColumn fx:id="colAction" maxWidth="1.7976931348623157E308" text="Action"/>
+            </columns>
+        </TableView>
+    </content>
+</Tab>

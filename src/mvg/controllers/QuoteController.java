@@ -67,22 +67,22 @@ public abstract class QuoteController extends ScreenController implements Initia
     @Override
     public void refreshView()
     {
-        if(UserManager.getInstance().getUsers()==null)
+        if(UserManager.getInstance().getDataset()==null)
         {
             IO.logAndAlert(getClass().getName(), "no users were found in the database.", IO.TAG_WARN);
             //return;
         }
-        if( ClientManager.getInstance().getClients()==null)
+        if( ClientManager.getInstance().getDataset()==null)
         {
             IO.logAndAlert(getClass().getName(), "no clients were found in the database.", IO.TAG_WARN);
             //return;
         }
 
         User[] users=null;
-        if(UserManager.getInstance().getUsers()!=null)
+        if(UserManager.getInstance().getDataset()!=null)
         {
-            users = new User[UserManager.getInstance().getUsers().values().toArray().length];
-            UserManager.getInstance().getUsers().values().toArray(users);
+            users = new User[UserManager.getInstance().getDataset().values().toArray().length];
+            UserManager.getInstance().getDataset().values().toArray(users);
         }
 
         //setup Quote default accounts
@@ -222,7 +222,7 @@ public abstract class QuoteController extends ScreenController implements Initia
             }
         });
         cbxClients.setButtonCell(null);
-        cbxClients.setItems(FXCollections.observableArrayList(ClientManager.getInstance().getClients().values()));
+        cbxClients.setItems(FXCollections.observableArrayList(ClientManager.getInstance().getDataset().values()));
 
         cbxContactPerson.setCellFactory(new Callback<ListView<User>, ListCell<User>>()
         {
@@ -265,9 +265,9 @@ public abstract class QuoteController extends ScreenController implements Initia
 
         //set status
         String status;
-        if(QuoteManager.getInstance().getSelectedQuote()!=null)
+        if((Quote)QuoteManager.getInstance().getSelected()!=null)
         {
-            switch (QuoteManager.getInstance().getSelectedQuote().getStatus())
+            switch (((Quote)((Quote)QuoteManager.getInstance().getSelected())).getStatus())
             {
                 case Quote.STATUS_PENDING:
                     status = "PENDING";
@@ -280,7 +280,7 @@ public abstract class QuoteController extends ScreenController implements Initia
                     break;
                 default:
                     status = "UNKNOWN";
-                    IO.logAndAlert("Error", "Unknown Quote status: " + QuoteManager.getInstance().getSelectedQuote()
+                    IO.logAndAlert("Error", "Unknown Quote status: " + ((Quote)((Quote)QuoteManager.getInstance().getSelected()))
                             .getStatus(), IO.TAG_ERROR);
                     break;
             }
@@ -312,25 +312,10 @@ public abstract class QuoteController extends ScreenController implements Initia
     @Override
     public void refreshModel()
     {
-        try
-        {
-            UserManager.getInstance().reloadDataFromServer();
-            ClientManager.getInstance().reloadDataFromServer();
-            ResourceManager.getInstance().reloadDataFromServer();
-            QuoteManager.getInstance().reloadDataFromServer();
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
+        UserManager.getInstance().initialize();
+        ClientManager.getInstance().initialize();
+        ResourceManager.getInstance().initialize();
+        QuoteManager.getInstance().initialize();
     }
 
     /**
@@ -411,7 +396,7 @@ public abstract class QuoteController extends ScreenController implements Initia
                                         getTableView().getItems().remove(quoteItem);
                                         getTableView().refresh();
                                         IO.log(getClass().getName(), IO.TAG_INFO, "removed QuoteItem["+quoteItem.get_id()+"]");
-                                        txtTotal.setText(Globals.CURRENCY_SYMBOL.getValue() + " " + String.valueOf(QuoteManager.getInstance().getSelectedQuote().getTotal()));
+                                        txtTotal.setText(Globals.CURRENCY_SYMBOL.getValue() + " " + String.valueOf(((Quote)(Quote)QuoteManager.getInstance().getSelected()).getTotal()));
                                     });
 
                                     hBox.setFillHeight(true);
@@ -750,9 +735,9 @@ public abstract class QuoteController extends ScreenController implements Initia
     {
         if(ResourceManager.getInstance()!=null)
         {
-            if(ResourceManager.getInstance().getResources()!=null)
+            if(ResourceManager.getInstance().getDataset()!=null)
             {
-                if(ResourceManager.getInstance().getResources().size()>0)
+                if(ResourceManager.getInstance().getDataset().size()>0)
                 {
                     ComboBox<Resource> resourceComboBox = new ComboBox<>();
                     resourceComboBox.setMinWidth(240);
@@ -829,7 +814,7 @@ public abstract class QuoteController extends ScreenController implements Initia
                             itemsModified = true;
 
                             //txtTotal.setText(Globals.CURRENCY_SYMBOL.getValue() + " " +
-                            //        String.valueOf(QuoteManager.computeQuoteTotal(QuoteManager.getInstance().getSelectedQuote())));
+                            //        String.valueOf(QuoteManager.computeQuoteTotal((Quote)QuoteManager.getInstance().getSelected())));
                             txtTotal.setText(Globals.CURRENCY_SYMBOL.getValue()+" "+String.valueOf(QuoteManager.computeQuoteTotal(tblQuoteItems.getItems())));
 
                         } else IO.logAndAlert("New Quote Resource", "Invalid resource selected.", IO.TAG_ERROR);
@@ -891,7 +876,7 @@ public abstract class QuoteController extends ScreenController implements Initia
     @FXML
     public void approveQuote()
     {
-        Quote selected = QuoteManager.getInstance().getSelectedQuote();
+        Quote selected = (Quote)(Quote)QuoteManager.getInstance().getSelected();
         if(selected!=null)
         {
             if(selected.getStatus()!=Quote.STATUS_APPROVED)
@@ -1088,7 +1073,7 @@ public abstract class QuoteController extends ScreenController implements Initia
             return;
         }
 
-        Quote selected = QuoteManager.getInstance().getSelectedQuote();
+        Quote selected = (Quote)QuoteManager.getInstance().getSelected();
         if(selected!=null)
         {
             // create a new Quote with selected Quote as parent and +1 revision number
@@ -1131,60 +1116,45 @@ public abstract class QuoteController extends ScreenController implements Initia
                         //on successful Quote creation refresh model & UI
                         ScreenManager.getInstance().showLoadingScreen(param ->
                         {
-                            try
+                            //refresh Quote Model's data-set
+                            QuoteManager.getInstance().forceSynchronise();
+
+                            //update selected Quote
+                            if(quote_id!=null)
                             {
-                                //refresh Quote Model
-                                QuoteManager.getInstance().reloadDataFromServer();
-
-                                //update selected Quote
-                                if(quote_id!=null)
+                                if (QuoteManager.getInstance().getDataset() != null)
                                 {
-                                    if (QuoteManager.getInstance().getQuotes() != null)
+                                    Quote new_selected = QuoteManager.getInstance().getDataset().get(quote_id);
+                                    if(new_selected!=null)
                                     {
-                                        Quote new_selected = QuoteManager.getInstance().getQuotes().get(quote_id);
-                                        if(new_selected!=null)
-                                        {
-                                            IO.log(getClass().getName(), IO.TAG_INFO,
-                                                    "setting selected quote to: " + quote_id + " revision: "
-                                                            +new_selected.getRevision());
-                                            QuoteManager.getInstance().setSelectedQuote(new_selected);
-                                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "newly created Quote is invalid.");
-                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not update Quote, no Quotes were found in the database.");
-                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not update Quote, quote_id is not set.");
+                                        IO.log(getClass().getName(), IO.TAG_INFO,
+                                                "setting selected quote to: " + quote_id + " revision: "
+                                                        +new_selected.getRevision());
+                                        QuoteManager.getInstance().setSelected(new_selected);
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "newly created Quote is invalid.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not update Quote, no Quotes were found in the database.");
+                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not update Quote, quote_id is not set.");
 
-                                //refresh GUI
-                                new Thread(new Runnable()
+                            //refresh GUI
+                            new Thread(new Runnable()
+                            {
+                                @Override
+                                public void run()
                                 {
-                                    @Override
-                                    public void run()
+                                    try
                                     {
-                                        try
+                                        if(ScreenManager.getInstance().loadScreen(Screens.VIEW_QUOTE.getScreen(),mvg.MVG.class.getResource("views/"+Screens.VIEW_QUOTE.getScreen())))
                                         {
-                                            if(ScreenManager.getInstance().loadScreen(Screens.VIEW_QUOTE.getScreen(),mvg.MVG.class.getResource("views/"+Screens.VIEW_QUOTE.getScreen())))
-                                            {
-                                                //Platform.runLater(() ->
-                                                ScreenManager.getInstance().setScreen(Screens.VIEW_QUOTE.getScreen());
-                                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load view quote screen.");
-                                        } catch (IOException e)
-                                        {
-                                            e.printStackTrace();
-                                            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                                        }
+                                            //Platform.runLater(() ->
+                                            ScreenManager.getInstance().setScreen(Screens.VIEW_QUOTE.getScreen());
+                                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load view quote screen.");
+                                    } catch (IOException e)
+                                    {
+                                        e.printStackTrace();
+                                        IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                                     }
-                                }).start();
-                            }catch (MalformedURLException ex)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                                IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-                            }catch (ClassNotFoundException e)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                                IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-                            }catch (IOException ex)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                                IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-                            }
+                                }
+                            }).start();
                             return null;
                         });
                         txtQuoteId.setText(quote_id.toString());
@@ -1206,7 +1176,7 @@ public abstract class QuoteController extends ScreenController implements Initia
         {
             if(!smgr.getActive().isExpired())
             {
-                Quote selected = QuoteManager.getInstance().getSelectedQuote();
+                Quote selected = (Quote)QuoteManager.getInstance().getSelected();
                 if(selected!=null)
                 {
                     if(selected.getStatus()==Quote.STATUS_APPROVED)
@@ -1214,60 +1184,48 @@ public abstract class QuoteController extends ScreenController implements Initia
                         Trip trip = new Trip();
                         trip.setQuote_id(selected.get_id());
                         trip.setCreator(smgr.getActiveUser().getUsr());
+                        trip.setClient_id(selected.getEnquiry().getCreatorUser().getOrganisation_id());
                         String new_trip_id = TripManager.getInstance().createNewTrip(trip, null);
                         if (new_trip_id != null)
                         {
                             IO.logAndAlert("Success", "Successfully created a new trip.", IO.TAG_INFO);
-                            try
-                            {
-                                TripManager.getInstance().reloadDataFromServer();
-                                if (TripManager.getInstance().getTrips() != null)
-                                {
-                                    TripManager.getInstance()
-                                            .setSelected(TripManager.getInstance().getTrips().get(new_trip_id));
 
-                                    ScreenManager.getInstance().showLoadingScreen(param ->
+                            //refresh Trips data-set
+                            TripManager.getInstance().forceSynchronise();
+
+                            if (TripManager.getInstance().getDataset() != null)
+                            {
+                                TripManager.getInstance()
+                                        .setSelected(TripManager.getInstance().getDataset().get(new_trip_id));
+
+                                ScreenManager.getInstance().showLoadingScreen(param ->
+                                {
+                                    new Thread(new Runnable()
                                     {
-                                        new Thread(new Runnable()
+                                        @Override
+                                        public void run()
                                         {
-                                            @Override
-                                            public void run()
+                                            try
                                             {
-                                                try
+                                                //TODO: load trips screen
+                                                if (ScreenManager.getInstance()
+                                                        .loadScreen(Screens.DASHBOARD.getScreen(), mvg.MVG.class.getResource("views/" + Screens.DASHBOARD
+                                                                        .getScreen())))
                                                 {
-                                                    //TODO: load trips screen
-                                                    if (ScreenManager.getInstance()
-                                                            .loadScreen(Screens.DASHBOARD.getScreen(), mvg.MVG.class.getResource("views/" + Screens.DASHBOARD
-                                                                            .getScreen())))
-                                                    {
-                                                        Platform.runLater(() -> ScreenManager.getInstance()
-                                                                .setScreen(Screens.DASHBOARD.getScreen()));
-                                                    }
-                                                    else IO.log(getClass()
-                                                            .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
-                                                } catch (IOException e)
-                                                {
-                                                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                                                    Platform.runLater(() -> ScreenManager.getInstance()
+                                                            .setScreen(Screens.DASHBOARD.getScreen()));
                                                 }
+                                                else IO.log(getClass()
+                                                        .getName(), IO.TAG_ERROR, "could not load dashboard screen.");
+                                            } catch (IOException e)
+                                            {
+                                                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                                             }
-                                        }).start();
-                                        return null;
-                                    });
-                                }
-                                else IO.logAndAlert("Error", "Could not find any trips in the database.", IO.TAG_INFO);
-                            } catch (MalformedURLException ex)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                                IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-                            } catch (ClassNotFoundException e)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                                IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-                            } catch (IOException ex)
-                            {
-                                IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                                IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-                            }
+                                        }
+                                    }).start();
+                                    return null;
+                                });
+                            } else IO.logAndAlert("Error", "Could not find any trips in the database.", IO.TAG_INFO);
                         } else IO.logAndAlert("Error", "Could not successfully create a new trip.", IO.TAG_ERROR);
                     } else IO.logAndAlert("Error", "Quote has not been approved yet.", IO.TAG_ERROR);
                 }else IO.logAndAlert("Error: Cannot Create Trip", "Cannot create trip because the selected quote is invalid.", IO.TAG_ERROR);
@@ -1292,15 +1250,20 @@ public abstract class QuoteController extends ScreenController implements Initia
     @FXML
     public void newUser()
     {
-        UserManager.getInstance().newExternalUserWindow("Create a new Contact Person for this Quote", param ->
+        String org_id="";
+        if(cbxClients.getSelectionModel().getSelectedItem()!=null)
         {
-            new Thread(() ->
+            org_id = cbxClients.getSelectionModel().getSelectedItem().get_id();
+            UserManager.getInstance().newExternalUserWindow("Create a new Contact Person for this Quote", org_id , param ->
             {
-                refreshModel();
-                Platform.runLater(() -> refreshView());
-            }).start();
-            return null;
-        });
+                new Thread(() ->
+                {
+                    refreshModel();
+                    Platform.runLater(() -> refreshView());
+                }).start();
+                return null;
+            });
+        } else IO.logAndAlert("Error", "Please choose a valid client [to be used as new user's organisation].", IO.TAG_WARN);
     }
 
     @FXML
@@ -1308,7 +1271,7 @@ public abstract class QuoteController extends ScreenController implements Initia
     {
         try
         {
-            String path = PDF.createQuotePdf(QuoteManager.getInstance().getSelectedQuote());
+            String path = PDF.createQuotePdf((Quote)QuoteManager.getInstance().getSelected());
             if(path!=null)
             {
                 PDFViewer pdfViewer = PDFViewer.getInstance();
@@ -1327,8 +1290,8 @@ public abstract class QuoteController extends ScreenController implements Initia
         //send email requesting approval of Quote
         try
         {
-            if(QuoteManager.getInstance().getSelectedQuote()!=null)
-                QuoteManager.getInstance().requestQuoteApproval(QuoteManager.getInstance().getSelectedQuote(), null);
+            if((Quote)QuoteManager.getInstance().getSelected()!=null)
+                QuoteManager.getInstance().requestQuoteApproval((Quote)QuoteManager.getInstance().getSelected(), null);
         } catch (IOException e)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());

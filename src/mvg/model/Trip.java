@@ -5,10 +5,7 @@
  */
 package mvg.model;
 
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import mvg.auxilary.Globals;
 import mvg.auxilary.IO;
 import mvg.managers.QuoteManager;
@@ -23,6 +20,7 @@ public class Trip extends MVGObject
 {
     private long date_assigned;
     private String quote_id;
+    private String client_id;
     private int status;
     private User[] assigned_users;
 
@@ -69,20 +67,29 @@ public class Trip extends MVGObject
     public Quote getQuote()
     {
         QuoteManager.getInstance().initialize();
-        if(QuoteManager.getInstance().getQuotes()!=null)
+        if(QuoteManager.getInstance().getDataset()!=null)
         {
             //return latest revision
-            Quote[] revisions = QuoteManager.getInstance().getQuotes().get(quote_id).getSortedSiblings("revision");
+            Quote[] revisions = QuoteManager.getInstance().getDataset().get(quote_id).getSortedSiblings("revision");
             return revisions[revisions.length-1];
-        }
-        else IO.logAndAlert(getClass().getName(), IO.TAG_ERROR, "No quotes were found on the database.");
+        } else IO.logAndAlert(getClass().getName(), IO.TAG_ERROR, "No quotes were found on the database.");
         return null;
+    }
+
+    public String getClient_id()
+    {
+        return client_id;
+    }
+
+    public void setClient_id(String client_id)
+    {
+        this.client_id = client_id;
     }
 
     /**
      * @return Array of Users assigned to a Trip object.
      */
-    public User[] getAssigned_users()
+    public User[] getAssigned_drivers()
     {
         return assigned_users;
     }
@@ -234,10 +241,9 @@ public class Trip extends MVGObject
             case "date_assigned":
                 return getDate_assigned();
             case "date_scheduled":
-                IO.log(getClass().getName(), IO.TAG_INFO, ">>>>>>getting date_scheduled");
                 return getDate_scheduled();
             case "assigned_users":
-                return getAssigned_users();
+                return getAssigned_drivers();
         }
         return super.get(var);
     }
@@ -251,6 +257,7 @@ public class Trip extends MVGObject
         String super_json = super.asJSONString();
         String json_obj = super_json.substring(0, super_json.length()-1)//toString().length()-1 to ignore the last brace.
                 +",\"quote_id\":\""+quote_id+"\""
+                +",\"client_id\":\""+client_id+"\""
                 +",\"status\":\""+status+"\"";
         if(date_assigned>0)
             json_obj+=",\"date_assigned\":\""+date_assigned+"\"";

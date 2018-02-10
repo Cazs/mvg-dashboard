@@ -45,9 +45,15 @@ public class ClientsController extends ScreenController implements Initializable
     public void refreshView()
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading clients view..");
-        if( ClientManager.getInstance().getClients()==null)
+
+        if(UserManager.getInstance().getDataset()==null)
         {
-            IO.logAndAlert(getClass().getName(), "no clients were found in the database.", IO.TAG_ERROR);
+            IO.logAndAlert(getClass().getSimpleName(), "No users were found in the database.", IO.TAG_ERROR);
+            return;
+        }
+        if( ClientManager.getInstance().getDataset()==null)
+        {
+            IO.logAndAlert(getClass().getSimpleName(), "No clients were found in the database.", IO.TAG_WARN);
             return;
         }
 
@@ -68,7 +74,7 @@ public class ClientsController extends ScreenController implements Initializable
         CustomTableViewControls.makeEditableTableColumn(colClientOther, TextFieldTableCell.forTableColumn(), 50, "other", "/clients");
 
         ObservableList<Client> lst_clients = FXCollections.observableArrayList();
-        lst_clients.addAll(ClientManager.getInstance().getClients().values());
+        lst_clients.addAll(ClientManager.getInstance().getDataset().values());
         tblClients.setItems(lst_clients);
 
         final ScreenManager screenManager = ScreenManager.getInstance();
@@ -125,7 +131,7 @@ public class ClientsController extends ScreenController implements Initializable
                                                             try
                                                             {
                                                                 //load User data to memory
-                                                                UserManager.getInstance().loadDataFromServer();
+                                                                UserManager.getInstance().initialize();
 
                                                                 //TODO: set screen to notifications screen
                                                                 if (ScreenManager.getInstance()

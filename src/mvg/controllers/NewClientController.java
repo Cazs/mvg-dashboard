@@ -190,27 +190,15 @@ public class NewClientController extends ScreenController implements Initializab
                     String new_client_id = response.replaceAll("\"","");//strip inverted commas around client_id
                     new_client_id = new_client_id.replaceAll("\n","");//strip new line chars
                     new_client_id = new_client_id.replaceAll(" ","");//strip whitespace chars
-                    try
-                    {
-                        ClientManager.getInstance().reloadDataFromServer();
-                        ClientManager.getInstance().setSelected(client);
-                        IO.logAndAlert("Success", "Successfully created a new client: "+client.getClient_name(), IO.TAG_INFO);
-                        itemsModified = false;
-                        //reload client data
-                        ClientManager.getInstance().reloadDataFromServer();
-                    }catch (MalformedURLException ex)
-                    {
-                        IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                        IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-                    }catch (ClassNotFoundException e)
-                    {
-                        IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                        IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-                    }catch (IOException ex)
-                    {
-                        IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                        IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-                    }
+
+                    ClientManager.getInstance().initialize();
+                    ClientManager.getInstance().setSelected(client);
+
+                    IO.logAndAlert("Success", "Successfully created a new client: "+client.getClient_name(), IO.TAG_INFO);
+                    itemsModified = false;
+
+                    //reload client data
+                    ClientManager.getInstance().forceSynchronise();
                 }else
                 {
                     //Get error message

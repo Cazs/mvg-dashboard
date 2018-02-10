@@ -48,12 +48,17 @@ public class TripsController extends ScreenController implements Initializable
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading trips view..");
 
-        if (TripManager.getInstance().getTrips() == null)
+        if(UserManager.getInstance().getDataset()==null)
+        {
+            IO.logAndAlert(getClass().getSimpleName(), "No users were found in the database.", IO.TAG_ERROR);
+            return;
+        }
+        if (TripManager.getInstance().getDataset() == null)
         {
             IO.logAndAlert(getClass().getSimpleName(), "No trips were found in the database.", IO.TAG_WARN);
             return;
         }
-        if (TripManager.getInstance().getTrips().values() == null)
+        if (TripManager.getInstance().getDataset().values() == null)
         {
             IO.logAndAlert(getClass().getSimpleName(), "No trips were found in the database.", IO.TAG_WARN);
             return;
@@ -74,7 +79,7 @@ public class TripsController extends ScreenController implements Initializable
         colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
 
         ObservableList<Trip> lst_trips = FXCollections.observableArrayList();
-        lst_trips.addAll(TripManager.getInstance().getTrips().values());
+        lst_trips.addAll(TripManager.getInstance().getDataset().values());
         tblTrips.setItems(lst_trips);
 
         Callback<TableColumn<Trip, String>, TableCell<Trip, String>> cellFactory
@@ -112,7 +117,8 @@ public class TripsController extends ScreenController implements Initializable
                                     {
                                         btnApprove.getStyleClass().add("btnAdd");
                                         btnApprove.setDisable(false);
-                                    } else {
+                                    } else
+                                    {
                                         btnApprove.getStyleClass().add("btnDisabled");
                                         btnApprove.setDisable(true);
                                     }
@@ -155,8 +161,11 @@ public class TripsController extends ScreenController implements Initializable
                                                 return null;
                                             }));
 
+                                    btnAssign.setOnAction(event ->
+                                            assignDrivers(trip));
+
                                     btnInvoice.setOnAction(event ->
-                                            generateQuoteInvoice(trip));
+                                            generateInvoice(trip));
 
                                     btnRemove.setOnAction(event ->
                                     {
@@ -193,20 +202,11 @@ public class TripsController extends ScreenController implements Initializable
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading trips data model..");
 
-        try
-        {
-            EnquiryManager.getInstance().reloadDataFromServer();
-            ResourceManager.getInstance().reloadDataFromServer();
-            ClientManager.getInstance().reloadDataFromServer();
-            QuoteManager.getInstance().reloadDataFromServer();
-            TripManager.getInstance().reloadDataFromServer();
-        } catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-        } catch (IOException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-        }
+        EnquiryManager.getInstance().initialize();
+        ResourceManager.getInstance().initialize();
+        ClientManager.getInstance().initialize();
+        QuoteManager.getInstance().initialize();
+        TripManager.getInstance().initialize();
     }
 
     /**
@@ -222,21 +222,16 @@ public class TripsController extends ScreenController implements Initializable
         }).start();
     }
 
-    private static void generateQuoteInvoice(Trip trip)
-    {
-        generateInvoice(trip);//, cbx_quote_revision.getValue().get_id()
-    }
-
     private static void generateInvoice(Trip trip)
     {
         if (trip != null)
         {
-            if(trip.getStatus()>=MVGObject.STATUS_APPROVED)
+            if(trip.getStatus()==MVGObject.STATUS_APPROVED)//if Trip has been approved
             {
-                if (trip.getAssigned_users() != null)
+                if (trip.getAssigned_drivers() != null)//if Trip has drivers assigned to it then generate invoice
                 {
                     Stage stage = new Stage();
-                    stage.setTitle("Select Quote["+trip.getQuote().get_id()+"] Revisions");
+                    stage.setTitle("Amount received for Trip["+trip.get_id()+"]");
                     stage.setResizable(false);
 
                     VBox container = new VBox();
@@ -245,8 +240,8 @@ public class TripsController extends ScreenController implements Initializable
                     HBox hbx_receivable = new HBox(new Label("Amount Receivable: "), txt_receivable);
 
                     container.getChildren().add(hbx_receivable);
-                    container.getChildren().add(new Label("Choose Quote Revisions"));
 
+                    /*container.getChildren().add(new Label("Choose Quote Revisions"));
                     HashMap<String, Quote> quote_revs = new HashMap<>();
                     for(Quote quote_rev: trip.getQuote().getSortedSiblings("revision"))
                     {
@@ -260,10 +255,118 @@ public class TripsController extends ScreenController implements Initializable
                         });
                         container.setSpacing(10);
                         container.getChildren().add(checkBox);
-                    }
+                    }*/
+
                     Button btnSubmit = new Button("Submit");
                     btnSubmit.setOnAction(event1 ->
+                            ScreenManager.getInstance().showLoadingScreen(param ->
+                            {
+                                new Thread(new Runnable()
+                                {
+                                    @Override
+                                    public void run()
+                                    {
+                                        try
+                                        {
+                                            /*//get Quote revisions
+                                            String str_quote_revs="";
+                                            for(Quote quote: quote_revs.values())
+                                                str_quote_revs+=(str_quote_revs==""?quote.getRevision():";"+quote.getRevision());//comma separated revision numbers*/
+
+                                            //get latest revision
+                                            Quote[] quote_revs = trip.getQuote().getSortedSiblings("revision");//get all revisions ordered by revision number
+                                            if(quote_revs!=null)
+                                            {
+                                                Quote latest_quote_revision = quote_revs[quote_revs.length - 1];
+
+                                                InvoiceManager.getInstance().createInvoice(trip, String
+                                                        .valueOf(latest_quote_revision.getRevision()), Double
+                                                        .parseDouble(txt_receivable.getText()), new_invoice_id ->
+                                                {
+                                                    Platform.runLater(() ->
+                                                    {
+                                                        if(stage!=null)
+                                                            if(stage.isShowing())
+                                                                stage.hide();
+                                                    });
+                                                    return null;
+                                                });
+
+                                                //TODO: show Invoices tab
+                                                if (ScreenManager.getInstance()
+                                                        .loadScreen(Screens.DASHBOARD
+                                                                .getScreen(), MVG.class.getResource("views/" + Screens.DASHBOARD
+                                                                .getScreen())))
+                                                {
+                                                    Platform.runLater(() -> ScreenManager
+                                                            .getInstance()
+                                                            .setScreen(Screens.DASHBOARD
+                                                                    .getScreen()));
+                                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load invoices list screen.");
+                                            }
+                                        } catch (NumberFormatException e)
+                                        {
+                                            IO.log(TripsController.class.getName(), IO.TAG_ERROR, "Invalid amount receivable: " + e.getMessage());
+                                        } catch (IOException e)
+                                        {
+                                            IO.log(TripsController.class.getName(), IO.TAG_ERROR, e.getMessage());
+                                        }
+                                    }
+                                }).start();
+                                return null;
+                            }));
+                    container.getChildren().add(btnSubmit);
+                    stage.setScene(new Scene(container));
+                    stage.show();
+                    stage.centerOnScreen();
+                } else
+                    IO.logAndAlert("Error", "Selected trip has no assigned drivers, please assign drivers first then try again.", IO.TAG_ERROR);
+            } else
+                IO.logAndAlert("Error", "Selected trip has not been APPROVED yet, please sign it first and try again.", IO.TAG_ERROR);
+        } else IO.logAndAlert("Error", "Selected trip is invalid.", IO.TAG_ERROR);
+    }
+
+    private static void assignDrivers(Trip trip)
+    {
+        if (trip != null)
+        {
+            if(trip.getStatus()>=MVGObject.STATUS_APPROVED)
+            {
+                Stage stage = new Stage();
+                stage.setTitle("Assign drivers for Trip["+trip.get_id()+"]");
+                stage.setResizable(false);
+
+                VBox container = new VBox();
+
+                container.getChildren().add(new Label("Possible Drivers"));
+
+                //get possible drivers - load all Users in the system
+                //TODO: add User job_title attribute to fix the above issue
+                //TODO: check drivers that have already been assigned.
+                final HashMap<String, User> drivers = new HashMap<>();
+                for(User driver: UserManager.getInstance().getDataset().values())
+                {
+                    CheckBox checkBox = new CheckBox(driver.getName());
+
+                    //check checkbox if already assigned
+                    if(trip.getAssigned_drivers()!=null)
+                        for(User trip_drv :trip.getAssigned_drivers())
+                            if(trip_drv.getUsr().equals(driver.getUsr()))
+                                checkBox.setSelected(true);
+
+                    checkBox.selectedProperty().addListener((observable, oldValue, newValue) ->
                     {
+                        //add driver to map on check, remove otherwise
+                        if(newValue)
+                            drivers.put(driver.get_id(), driver);
+                        else drivers.remove(driver.get_id());
+                    });
+                    container.setSpacing(10);
+                    container.getChildren().add(checkBox);
+                }
+
+                Button btnSubmit = new Button("Submit");
+                btnSubmit.setOnAction(event1 ->
                         ScreenManager.getInstance().showLoadingScreen(param ->
                         {
                             new Thread(new Runnable()
@@ -273,22 +376,33 @@ public class TripsController extends ScreenController implements Initializable
                                 {
                                     try
                                     {
-                                        String str_quote_revs="";
-                                        for(Quote quote: quote_revs.values())
-                                            str_quote_revs+=(str_quote_revs==""?quote.getRevision():";"+quote.getRevision());//comma separated revision numbers
-                                        InvoiceManager.getInstance().createInvoice(trip, str_quote_revs, Double.parseDouble(txt_receivable.getText()), callback -> null);
-
-                                        //TODO: show Invoices tab
-                                        if (ScreenManager.getInstance()
-                                                .loadScreen(Screens.DASHBOARD
-                                                        .getScreen(), MVG.class.getResource("views/" + Screens.DASHBOARD
-                                                        .getScreen())))
+                                        if(drivers!=null)
                                         {
-                                            Platform.runLater(() -> ScreenManager
-                                                    .getInstance()
-                                                    .setScreen(Screens.DASHBOARD
-                                                            .getScreen()));
-                                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load invoices list screen.");
+                                            User[] drivers_arr = new User[drivers.size()];
+                                            drivers.values().toArray(drivers_arr);
+
+                                            TripManager.assignTripDrivers(trip, drivers_arr, param1 ->
+                                            {
+                                                Platform.runLater(() ->
+                                                {
+                                                    if(stage!=null)
+                                                        if(stage.isShowing())
+                                                            stage.hide();
+                                                });
+                                                return null;
+                                            });
+
+                                            if (ScreenManager.getInstance()
+                                                    .loadScreen(Screens.DASHBOARD
+                                                            .getScreen(), MVG.class.getResource("views/" + Screens.DASHBOARD
+                                                            .getScreen())))
+                                            {
+                                                Platform.runLater(() -> ScreenManager
+                                                        .getInstance()
+                                                        .setScreen(Screens.DASHBOARD
+                                                                .getScreen()));
+                                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not load invoices list screen.");
+                                        }
                                     } catch (NumberFormatException e)
                                     {
                                         IO.log(TripsController.class.getName(), IO.TAG_ERROR, "Invalid amount receivable: " + e.getMessage());
@@ -299,16 +413,13 @@ public class TripsController extends ScreenController implements Initializable
                                 }
                             }).start();
                             return null;
-                        });
-                    });
-                    container.getChildren().add(btnSubmit);
-                    stage.setScene(new Scene(container));
-                    stage.show();
-                    stage.centerOnScreen();
-                } else
-                    IO.logAndAlert("Error", "Selected trip has no assigned employees, please assign employees first then try again.", IO.TAG_ERROR);
+                        }));
+                container.getChildren().add(btnSubmit);
+                stage.setScene(new Scene(new ScrollPane(container)));
+                stage.show();
+                stage.centerOnScreen();
             } else
-                IO.logAndAlert("Error", "Selected trip has not been SIGNED yet, please sign it first and try again.", IO.TAG_ERROR);
+                IO.logAndAlert("Error", "Selected trip has not been APPROVED yet, please sign it first and try again.", IO.TAG_ERROR);
         } else IO.logAndAlert("Error", "Selected trip is invalid.", IO.TAG_ERROR);
     }
 
@@ -327,7 +438,7 @@ public class TripsController extends ScreenController implements Initializable
                 IO.logAndAlert("Error", "Selected Trip object is not set.", IO.TAG_ERROR);
                 return;
             }
-            TripManager.approveTrip(TripManager.getInstance().getSelected(), null);
+            TripManager.approveTrip((Trip)TripManager.getInstance().getSelected(), null);
         });
 
         //View signed Trip menu item

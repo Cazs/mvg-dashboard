@@ -607,7 +607,7 @@ public class RemoteComms
         return httpConn;
     }
 
-    public static void updateObjectOnServer(MVGObject object, String property)
+    public static void updateObjectOnServer(MVGObject object) throws IOException
     {
         if(SessionManager.getInstance().getActive()!=null)
         {
@@ -620,26 +620,7 @@ public class RemoteComms
                 {
                     headers.add(new AbstractMap.SimpleEntry<>("Cookie", SessionManager.getInstance().getActive().getSessionId()));
                     headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
-                    try
-                    {
-                        HttpURLConnection connection = RemoteComms.patchJSON(object.apiEndpoint(), object.toString(), headers);
-                        if(connection!=null)
-                        {
-                            if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
-                                IO.log(TAG, IO.TAG_INFO, "Successfully updated MVGObject{"+object.getClass().getName()+"}'s '" + property + "' property to ["+object.get(property)+"].");
-                            else
-                            {
-                                String msg = IO.readStream(connection.getErrorStream());
-                                /*Gson gson = new GsonBuilder().create();
-                                Error error = gson.fromJson(msg, Error.class);*/
-                                IO.logAndAlert("Error " +String.valueOf(connection.getResponseCode()), msg, IO.TAG_ERROR);
-                            }
-                            connection.disconnect();
-                        } else IO.logAndAlert("Error", "Connection to server was interrupted.", IO.TAG_ERROR);
-                    } catch (IOException e)
-                    {
-                        IO.logAndAlert(TAG, e.getMessage(), IO.TAG_ERROR);
-                    }
+                    postJSON(object.apiEndpoint(), object.asJSONString(), headers);
                 } else IO.log(TAG, IO.TAG_ERROR, "Invalid MVGObject");
             } else IO.logAndAlert("Session expired", "No active sessions.", IO.TAG_ERROR);
         } else IO.logAndAlert("Error: Invalid Session", "Active Session is invalid.", IO.TAG_ERROR);

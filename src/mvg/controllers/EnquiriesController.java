@@ -32,19 +32,29 @@ public class EnquiriesController extends ScreenController implements Initializab
     public void refreshView()
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading enquiries view..");
-        if( EnquiryManager.getInstance().getEnquiries()==null)
+
+        if(UserManager.getInstance().getDataset()==null)
         {
-            IO.logAndAlert(getClass().getName(), "no enquiries were found in the database.", IO.TAG_ERROR);
+            IO.logAndAlert(getClass().getSimpleName(), "No users were found in the database.", IO.TAG_ERROR);
+            return;
+        }
+        if( EnquiryManager.getInstance().getDataset()==null)
+        {
+            IO.logAndAlert(getClass().getSimpleName(), "No enquiries were found in the database.", IO.TAG_WARN);
             return;
         }
 
         colId.setMinWidth(100);
         colId.setCellValueFactory(new PropertyValueFactory<>("_id"));
         colClient.setCellValueFactory(new PropertyValueFactory<>("client_name"));
-        CustomTableViewControls.makeEditableTableColumn(colEnquiry, TextFieldTableCell.forTableColumn(), 80, "enquiry", "/enquiries");
+        colEnquiry.setCellValueFactory(new PropertyValueFactory<>("enquiry"));
+        colAddress.setCellValueFactory(new PropertyValueFactory<>("pickup_location"));
+        colDestination.setCellValueFactory(new PropertyValueFactory<>("destination"));
+        colTripType.setCellValueFactory(new PropertyValueFactory<>("trip_type"));
+        /*CustomTableViewControls.makeEditableTableColumn(colEnquiry, TextFieldTableCell.forTableColumn(), 80, "enquiry", "/enquiries");
         CustomTableViewControls.makeEditableTableColumn(colAddress, TextFieldTableCell.forTableColumn(), 120, "pickup_location", "/enquiries");
         CustomTableViewControls.makeEditableTableColumn(colDestination, TextFieldTableCell.forTableColumn(), 120, "destination", "/enquiries");
-        CustomTableViewControls.makeEditableTableColumn(colTripType, TextFieldTableCell.forTableColumn(), 80, "trip_type", "/enquiries");
+        CustomTableViewControls.makeEditableTableColumn(colTripType, TextFieldTableCell.forTableColumn(), 80, "trip_type", "/enquiries");*/
         colCreator.setMinWidth(100);
         colCreator.setCellValueFactory(new PropertyValueFactory<>("creator"));
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDate, "date_scheduled");
@@ -52,7 +62,7 @@ public class EnquiriesController extends ScreenController implements Initializab
         CustomTableViewControls.makeEditableTableColumn(colOther, TextFieldTableCell.forTableColumn(), 50, "other", "/enquiries");
 
         ObservableList<Enquiry> lst_enquiries = FXCollections.observableArrayList();
-        lst_enquiries.addAll(EnquiryManager.getInstance().getEnquiries().values());
+        lst_enquiries.addAll(EnquiryManager.getInstance().getDataset().values());
         tblEnquiries.setItems(lst_enquiries);
 
         Callback<TableColumn<Enquiry, String>, TableCell<Enquiry, String>> cellFactory
@@ -146,7 +156,8 @@ public class EnquiriesController extends ScreenController implements Initializab
                                                             public void run()
                                                             {
                                                                 //set selected Quote
-                                                                QuoteManager.getInstance().setSelectedQuote((String)new_quote_id);
+                                                                if(QuoteManager.getInstance().getDataset()!=null)
+                                                                    QuoteManager.getInstance().setSelected(QuoteManager.getInstance().getDataset().get(new_quote_id));
                                                                 try
                                                                 {
                                                                     if(ScreenManager.getInstance().loadScreen(Screens.VIEW_QUOTE.getScreen(),mvg.MVG.class.getResource("views/"+Screens.VIEW_QUOTE.getScreen())))
@@ -198,24 +209,15 @@ public class EnquiriesController extends ScreenController implements Initializab
         colAction.setCellFactory(cellFactory);
 
         tblEnquiries.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) ->
-                EnquiryManager.getInstance().setSelectedEnquiry(tblEnquiries.getSelectionModel().getSelectedItem()));
+                EnquiryManager.getInstance().setSelected(tblEnquiries.getSelectionModel().getSelectedItem()));
     }
 
     @Override
     public void refreshModel()
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading enquiries data model..");
-        try
-        {
-            ClientManager.getInstance().reloadDataFromServer();
-            EnquiryManager.getInstance().reloadDataFromServer();
-        } catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-        } catch (IOException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-        }
+            ClientManager.getInstance().initialize();
+            EnquiryManager.getInstance().initialize();
     }
 
     @Override

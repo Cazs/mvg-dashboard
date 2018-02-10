@@ -10,11 +10,18 @@ import java.net.URL;
 import java.util.AbstractMap;
 import java.util.Stack;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import mvg.auxilary.IO;
 import mvg.auxilary.RadialMenuItemCustom;
+import mvg.controllers.DashboardController;
 import mvg.controllers.ScreenController;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -37,6 +44,7 @@ public class ScreenManager extends StackPane
 {
     private RadialMenu radialMenu;
     private boolean show;
+    public static final double MENU_SIZE = 40.0;
     private double lastOffsetValue;
     private double lastInitialAngleValue;
     private double gestureAngle = 0;
@@ -57,6 +65,7 @@ public class ScreenManager extends StackPane
     private static ScreenManager screenManager = new ScreenManager();
     private Label lblScreenName;
     private Stage stage;
+    private BorderPane translucent_borderpane;
 
     /*public ScreenManager(Stage stage)
     {
@@ -154,69 +163,88 @@ public class ScreenManager extends StackPane
         }
     }
 
-    public void createRadialMenu()
+    public void setLblScreenName(Label screenName)
     {
-        Color slightlyTrans = new Color(1.0,1.0,1.0,0.6);
+        this.lblScreenName=screenName;
+    }
 
+    public void initRadialMenu(RadialMenuItem[] menuItems)//, RadialContainerMenuItem[] containerMenuItems
+    {
+        if(menuItems==null)
+        {
+            IO.log(getClass().getName(), IO.TAG_WARN, "context menu for active screen is null.");
+            return;
+        }
         radialMenu = new RadialMenu(initialAngle, innerRadius, radius, offset, Color.DARKCYAN, Color.CYAN,
                 Color.DARKGREY.darker().darker(), Color.DARKGREY.darker(),
                 false, RadialMenu.CenterVisibility.ALWAYS, null);
         radialMenu.setTranslateX(400);
         radialMenu.setTranslateY(400);
+        radialMenu.setVisible(false);
+        //radialMenu.hideRadialMenu();
         //radialMenu.setRotate(-90);
 
-        RadialContainerMenuItem level1Container = new RadialContainerMenuItem(containerSize, "Level 1 Container", null);
-        RadialMenuItem level1Item = new RadialMenuItemCustom(menuSize, "level 1 item 1", null, null, null);//RadialMenuItem(menuSize, "level 1 item", null, null);
-        RadialMenuItem level1Item2 = new RadialMenuItemCustom(menuSize, "level 1 item 2", null, null, null);//RadialMenuItem(menuSize, "level 1 item", null, null);
-        RadialMenuItem level1Item3 = new RadialMenuItemCustom(menuSize, "level 1 item 3", null, null, null);//RadialMenuItem(menuSize, "level 1 item", null, null);
+        //Add items/containers to RadialMenu component
+        for(RadialMenuItem menuItem: menuItems)
+            radialMenu.addMenuItem(menuItem);
 
-        RadialContainerMenuItem level2Container = new RadialContainerMenuItem(containerSize, "Level 2 Container", null);
-        RadialMenuItem level2Item = new RadialMenuItemCustom(menuSize, "level 2 item", null, null, null);
-
-        RadialContainerMenuItem level3Container = new RadialContainerMenuItem(containerSize, "Level 3 Container", null);
-        RadialMenuItem level3Item = new RadialMenuItemCustom(menuSize, "level 3 item", null, null, null);
-
-        RadialMenuItem level4Item = new RadialMenuItemCustom(menuSize, "level 4 item", null, null, null);
-
-        //Add all your items in a nested order
-        level1Container.addMenuItem(level2Item);
-        level1Container.addMenuItem(level2Container);
-
-        level2Container.addMenuItem(level3Item);
-        level2Container.addMenuItem(level3Container);
-
-        level3Container.addMenuItem(level4Item);
-
-        //Add top level items/containers to actual RadialMenu component
-        radialMenu.addMenuItem(level1Item);
-        radialMenu.addMenuItem(level1Item2);
-        radialMenu.addMenuItem(level1Item3);
-        radialMenu.addMenuItem(level1Container);
-        //radialMenu.addMenuItem(level3Container);
+        getChildren().add(radialMenu);
     }
 
-    public void setLblScreenName(Label screenName)
+    public void showContextMenu()//final double x, final double y
     {
-        this.lblScreenName=screenName;
+        /*if(focused!=null)
+        {
+            if(focused instanceof DashboardController)
+                initRadialMenu(((DashboardController)focused).getContextMenu());
+            else if(focused instanceof OtherController)
+                initRadialMenu(((OtherController)focused).getContextMenu());
+            else initRadialMenu(focused.getDefaultContextMenu());
+        }*/
+
+        /*if(radialMenu.isVisible())
+        {
+            lastInitialAngleValue = radialMenu.getInitialAngle();
+            lastOffsetValue = radialMenu.getOffset();
+            //radialMenu.setVisible(false);
+        }*/
+        radialMenu.setTranslateX(this.getMinWidth()/2);
+        //radialMenu.setTranslateY(y);
+        radialMenu.setVisible(true);
+
+        translucent_borderpane = new BorderPane();
+        translucent_borderpane.setStyle("-fx-background-color: rgba(0,0,0,.7);");
+        this.getChildren().add(this.getChildren().size()-1, translucent_borderpane);
+
+        final DoubleProperty y_transition =  radialMenu.translateYProperty();
+        Timeline yTransition = new Timeline(new KeyFrame(Duration.ONE, new KeyValue(y_transition, 0)),
+                new KeyFrame(Duration.millis(150),new KeyValue(y_transition, this.getMinHeight()/2)));
+        yTransition.play();
+
+        /*final DoubleProperty x_transition =  radialMenu.translateXProperty();
+        Timeline transition = new Timeline(new KeyFrame(Duration.ONE, new KeyValue(x_transition, this.getWidth())),
+                new KeyFrame(Duration.millis(150),new KeyValue(x_transition, this.getMinWidth()/2)));
+        transition.play();*/
+
+        final DoubleProperty opacity_transition_property =  radialMenu.opacityProperty();
+        Timeline opacity_transition = new Timeline(new KeyFrame(Duration.ONE, new KeyValue(opacity_transition_property, 0.0)),
+                new KeyFrame(Duration.millis(250),new KeyValue(opacity_transition_property, 1.0)));
+        opacity_transition.play();
+
+        radialMenu.showRadialMenu();
     }
-    /*private void hideRadialMenu()
+
+    public void hideContextMenu()
     {
-        final FadeTransition fade = FadeTransitionBuilder.create()
-                .node(this.radialMenu).fromValue(1).toValue(0)
-                .duration(Duration.millis(300))
-                .onFinished(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(final ActionEvent arg0) {
-                        setVisible(false);
-                    }
-                }).build();
-
-        final ParallelTransition transition = ParallelTransitionBuilder
-                .create().children(fade).build();
-
+        radialMenu.hideRadialMenu();
+        final DoubleProperty opacity_transition =  radialMenu.opacityProperty();
+        Timeline transition = new Timeline(new KeyFrame(Duration.ONE, new KeyValue(opacity_transition, 1.0)),
+                new KeyFrame(Duration.millis(250),new KeyValue(opacity_transition, 0.0)));
         transition.play();
-    }*/
+        if(translucent_borderpane!=null)
+            this.getChildren().remove(translucent_borderpane);
+        radialMenu.setVisible(false);
+    }
 
     private void showRadialMenu(final double x, final double y)
     {
@@ -259,13 +287,13 @@ public class ScreenManager extends StackPane
     public void setScreen(final String id)
     {
         if(screens.peek()!=null)
-                    screen = screens.peek().getValue();
+            screen = screens.peek().getValue();
         if(screen!=null)
         {
             ScreenController controller = null;
             //update UI of current view
             if(controllers.peek()!=null)
-                    controller = controllers.peek().getValue();
+                controller = controllers.peek().getValue();
 
             if(controller!=null)
             {
@@ -348,7 +376,7 @@ public class ScreenManager extends StackPane
     {
         return this.focused_id;
     }
-    
+
     public Node removeScreen(Node screen)
     {
         //screens

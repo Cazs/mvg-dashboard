@@ -2,6 +2,7 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -13,12 +14,9 @@ import mvg.model.Client;
 import mvg.model.CustomTableViewControls;
 import mvg.model.Notification;
 
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.time.ZoneId;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +27,6 @@ import java.util.HashMap;
 public class NotificationManager extends MVGObjectManager
 {
     private HashMap<String, Notification> notifications;
-    private Notification selected;
     private Gson gson;
     private static NotificationManager notificationManager = new NotificationManager();
     public static final String TAG = "NotificationManager";
@@ -41,101 +38,88 @@ public class NotificationManager extends MVGObjectManager
     {
     }
 
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
+
     public static NotificationManager getInstance()
     {
         return notificationManager;
     }
 
-    public HashMap<String, Notification> getNotifications(){return notifications;}
-
-    public void setSelected(Notification notification)
-    {
-        this.selected=notification;
-    }
-
-    public Notification getSelected()
-    {
-        return this.selected;
-    }
+    @Override
+    public HashMap<String, Notification> getDataset(){return notifications;}
 
     @Override
-    public void initialize()
+    Callback getSynchronisationCallback()
     {
-        loadDataFromServer();
-    }
-
-    public void loadDataFromServer()
-    {
-        try
+        return new Callback()
         {
-            if(notifications==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "notifications object has already been set.");
-        } catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        SessionManager smgr = SessionManager.getInstance();
-        if(smgr.getActive()!=null)
-        {
-            if(!smgr.getActive().isExpired())
+            @Override
+            public Object call(Object param)
             {
-                gson = new GsonBuilder().create();
-                ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
-                headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-
-                //Get Timestamp
-                String timestamp_json = RemoteComms.sendGetRequest("/timestamp/notifications_timestamp", headers);
-                Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
-                if (cntr_timestamp != null)
+                try
                 {
-                    timestamp = cntr_timestamp.getCount();
-                    filename = "notifications_" + timestamp + ".dat";
-                    IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
-                } else
-                {
-                    IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
-                    return;
-                }
-
-                if (!isSerialized(ROOT_PATH + filename))
-                {
-                    String notifications_json_object = RemoteComms.sendGetRequest("/notifications", headers);
-                    NotificationServerObject notificationServerObject = gson.fromJson(notifications_json_object, NotificationServerObject.class);
-                    if(notificationServerObject!=null)
+                    SessionManager smgr = SessionManager.getInstance();
+                    if(smgr.getActive()!=null)
                     {
-                        if(notificationServerObject.get_embedded()!=null)
+                        if(!smgr.getActive().isExpired())
                         {
-                            Notification[] notifications_arr = notificationServerObject.get_embedded().getNotifications();
+                            gson = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
 
-                            notifications = new HashMap<>();
-                            for (Notification notification : notifications_arr)
-                                notifications.put(notification.get_id(), notification);
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Notifications in database.");
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "NotificationServerObject (containing Notification objects & other metadata) is null");
+                            //Get Timestamp
+                            String timestamp_json = RemoteComms.sendGetRequest("/timestamp/notifications_timestamp", headers);
+                            Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
+                            if (cntr_timestamp != null)
+                            {
+                                timestamp = cntr_timestamp.getCount();
+                                filename = "notifications_" + timestamp + ".dat";
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
+                            } else
+                            {
+                                IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
+                                return null;
+                            }
 
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of notifications.");
-                    this.serialize(ROOT_PATH + filename, notifications);
-                } else
+                            if (!isSerialized(ROOT_PATH + filename))
+                            {
+                                String notifications_json_object = RemoteComms.sendGetRequest("/notifications", headers);
+                                NotificationServerObject notificationServerObject = gson.fromJson(notifications_json_object, NotificationServerObject.class);
+                                if(notificationServerObject!=null)
+                                {
+                                    if(notificationServerObject.get_embedded()!=null)
+                                    {
+                                        Notification[] notifications_arr = notificationServerObject.get_embedded().getNotifications();
+
+                                        notifications = new HashMap<>();
+                                        for (Notification notification : notifications_arr)
+                                            notifications.put(notification.get_id(), notification);
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Notifications in database.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "NotificationServerObject (containing Notification objects & other metadata) is null");
+
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of notifications.");
+                                serialize(ROOT_PATH + filename, notifications);
+                            } else
+                            {
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
+                                notifications = (HashMap<String, Notification>) deserialize(ROOT_PATH + filename);
+                            }
+                        } else IO.logAndAlert("Error: Active session has expired.", "Session Expired", IO.TAG_ERROR);
+                    } else IO.logAndAlert("Error: No active sessions.", "Session Expired", IO.TAG_ERROR);
+                } catch (ClassNotFoundException e)
                 {
-                    IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
-                    notifications = (HashMap<String, Notification>) this.deserialize(ROOT_PATH + filename);
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                 }
-            } else IO.logAndAlert("Error: Active session has expired.", "Session Expired", IO.TAG_ERROR);
-        } else IO.logAndAlert("Error: No active sessions.", "Session Expired", IO.TAG_ERROR);
+                return null;
+            }
+        };
     }
 
     public void newNotificationWindow(Client client, Callback callback)
@@ -205,19 +189,32 @@ public class NotificationManager extends MVGObjectManager
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
                     {
                         IO.logAndAlert("Success", "Successfully sent notification to "+client.getClient_name()+"!", IO.TAG_INFO);
+
                         //reload model manager
-                        reloadDataFromServer();
+                        forceSynchronise();
+
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
+                        {
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
                         if(callback!=null)
-                            callback.call(null);
+                            callback.call(IO.readStream(connection.getInputStream()));
                     } else
                     {
                         IO.logAndAlert( "ERROR_" + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
+                        //execute callback w/o args
+                        if(callback!=null)
+                            callback.call(null);
                     }
-                    connection.disconnect();
+                    //close connection
+                    if(connection!=null)
+                        connection.disconnect();
                 }
-            } catch (ClassNotFoundException e)
-            {
-                IO.log(TAG, IO.TAG_ERROR, e.getMessage());
             } catch (IOException e)
             {
                 IO.log(TAG, IO.TAG_ERROR, e.getMessage());
@@ -232,12 +229,12 @@ public class NotificationManager extends MVGObjectManager
 
         //Setup scene and display stage
         Scene scene = new Scene(vbox);
-        File fCss = new File("src/fadulousbms/styles/home.css");
+        File fCss = new File("src/mvg/styles/home.css");
         scene.getStylesheets().clear();
         scene.getStylesheets().add("file:///"+ fCss.getAbsolutePath().replace("\\", "/"));
 
         stage.onHidingProperty().addListener((observable, oldValue, newValue) ->
-                loadDataFromServer());
+                forceSynchronise());
 
         stage.setScene(scene);
         stage.show();

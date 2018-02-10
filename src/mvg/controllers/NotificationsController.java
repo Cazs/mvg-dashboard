@@ -46,17 +46,17 @@ public class NotificationsController extends ScreenController implements Initial
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading notifications view..");
 
-        if(UserManager.getInstance().getUsers()==null)
+        if(UserManager.getInstance().getDataset()==null)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, "no employees were found in the database.");
             return;
         }
-        if(NotificationManager.getInstance().getNotifications()==null)
+        if(NotificationManager.getInstance().getDataset()==null)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, "no notifications were found in the database.");
             return;
         }
-        if(ClientManager.getInstance().getClients()==null)
+        if(ClientManager.getInstance().getDataset()==null)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, "no clients were found in the database.");
             return;
@@ -134,7 +134,7 @@ public class NotificationsController extends ScreenController implements Initial
         tblNotifications.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) ->
                 NotificationManager.getInstance().setSelected(tblNotifications.getSelectionModel().getSelectedItem()));
         //set list of Notifications
-        tblNotifications.setItems(FXCollections.observableArrayList(NotificationManager.getInstance().getNotifications().values()));
+        tblNotifications.setItems(FXCollections.observableArrayList(NotificationManager.getInstance().getDataset().values()));
     }
 
     @Override
@@ -142,9 +142,9 @@ public class NotificationsController extends ScreenController implements Initial
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading notifications data model..");
 
-        UserManager.getInstance().loadDataFromServer();
-        ClientManager.getInstance().loadDataFromServer();
-        NotificationManager.getInstance().loadDataFromServer();
+        UserManager.getInstance().initialize();
+        ClientManager.getInstance().initialize();
+        NotificationManager.getInstance().initialize();
     }
 
     /**

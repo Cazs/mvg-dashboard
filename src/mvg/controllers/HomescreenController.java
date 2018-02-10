@@ -260,9 +260,19 @@ public class HomescreenController extends ScreenController implements Initializa
     @FXML
     public void submitEnquiry()
     {
-        if(SessionManager.getInstance().getActiveUser()!=null)
+        if(SessionManager.getInstance().getActiveUser()==null)
         {
-            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.", IO.TAG_ERROR);
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.\nPlease log in.", IO.TAG_ERROR);
+            return;
+        }
+        if(SessionManager.getInstance().getActive()==null)
+        {
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.\nPlease log in.", IO.TAG_ERROR);
+            return;
+        }
+        if(SessionManager.getInstance().getActive().isExpired())
+        {
+            IO.logAndAlert("Error: Invalid Session", "Active session has expired.\nPlease log in.", IO.TAG_ERROR);
             return;
         }
         if(!Validators.isValidNode(txtEnquiry, "Invalid Enquiry", 5, "^.*(?=.{5,}).*"))//"please enter a valid enquiry"

@@ -2,6 +2,7 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -12,13 +13,10 @@ import mvg.auxilary.*;
 import mvg.model.*;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 
 /**
@@ -28,7 +26,6 @@ public class InvoiceManager extends MVGObjectManager
 {
     private HashMap<String, Invoice> invoices;
     private static InvoiceManager invoice_manager = new InvoiceManager();
-    private Invoice selected_invoice;
     private Gson gson;
     public static final String ROOT_PATH = "cache/invoices/";
     public String filename = "";
@@ -47,84 +44,81 @@ public class InvoiceManager extends MVGObjectManager
     @Override
     public void initialize()
     {
-        loadDataFromServer();
+        synchroniseDataset();
     }
 
-    public void loadDataFromServer()
-    {
-        try
-        {
-            SessionManager smgr = SessionManager.getInstance();
-            if(smgr.getActive()!=null)
-            {
-                if(!smgr.getActive().isExpired())
-                {
-                    gson  = new GsonBuilder().create();
-                    ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
-                    headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-
-                    //Get Timestamp
-                    String timestamp_json = RemoteComms.sendGetRequest("/timestamp/invoices_timestamp", headers);
-                    Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
-                    if(cntr_timestamp!=null)
-                    {
-                        timestamp = cntr_timestamp.getCount();
-                        filename = "invoices_"+timestamp+".dat";
-                        IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: "+timestamp);
-                    }else {
-                        IO.log(this.getClass().getName(), IO.TAG_ERROR, "could not get valid timestamp");
-                        return;
-                    }
-
-                    if(!isSerialized(ROOT_PATH+filename))
-                    {
-                        String invoices_json = RemoteComms.sendGetRequest("/invoices", headers);
-                        InvoiceServerObject invoiceServerObject= gson.fromJson(invoices_json, InvoiceServerObject.class);
-                        if(invoiceServerObject!=null)
-                        {
-                            if(invoiceServerObject.get_embedded()!=null)
-                            {
-                                Invoice[] invoices_arr = invoiceServerObject.get_embedded().getInvoices();
-                                invoices = new HashMap<>();
-                                for (Invoice invoice : invoices_arr)
-                                    invoices.put(invoice.get_id(), invoice);
-                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Invoices in the database.");
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "InvoiceServerObject (containing Invoice objects & other metadata) is null");
-
-                        IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of invoices.");
-                        this.serialize(ROOT_PATH+filename, invoices);
-                    } else
-                    {
-                        IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object ["+ROOT_PATH+filename+"] on local disk is already up-to-date.");
-                        invoices = (HashMap<String, Invoice>) this.deserialize(ROOT_PATH+filename);
-                    }
-                } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-            } else IO.logAndAlert("No active sessions.", "Active Session is invalid", IO.TAG_ERROR);
-        } catch (MalformedURLException ex)
-        {
-            IO.log(TAG, IO.TAG_ERROR, ex.getMessage());
-        } catch (ClassNotFoundException ex)
-        {
-            IO.log(TAG, IO.TAG_ERROR, ex.getMessage());
-        } catch (IOException ex)
-        {
-            IO.log(TAG, IO.TAG_ERROR, ex.getMessage());
-        }
-    }
-
-    public HashMap<String, Invoice> getInvoices()
+    @Override
+    public HashMap<String, Invoice> getDataset()
     {
         return invoices;
     }
 
-    public Invoice getSelected()
+    @Override
+    Callback getSynchronisationCallback()
     {
-        return selected_invoice;
-    }
+        return new Callback()
+        {
+            @Override
+            public Object call(Object param)
+            {
+                try
+                {
+                    SessionManager smgr = SessionManager.getInstance();
+                    if(smgr.getActive()!=null)
+                    {
+                        if(!smgr.getActive().isExpired())
+                        {
+                            gson  = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
 
-    public void setSelected(Invoice selected_invoice)
-    {
-        this.selected_invoice = selected_invoice;
+                            //Get Timestamp
+                            String timestamp_json = RemoteComms.sendGetRequest("/timestamp/invoices_timestamp", headers);
+                            Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
+                            if(cntr_timestamp!=null)
+                            {
+                                timestamp = cntr_timestamp.getCount();
+                                filename = "invoices_"+timestamp+".dat";
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: "+timestamp);
+                            }else {
+                                IO.log(this.getClass().getName(), IO.TAG_ERROR, "could not get valid timestamp");
+                                return null;
+                            }
+
+                            if(!isSerialized(ROOT_PATH+filename))
+                            {
+                                String invoices_json = RemoteComms.sendGetRequest("/invoices", headers);
+                                InvoiceServerObject invoiceServerObject= gson.fromJson(invoices_json, InvoiceServerObject.class);
+                                if(invoiceServerObject!=null)
+                                {
+                                    if(invoiceServerObject.get_embedded()!=null)
+                                    {
+                                        Invoice[] invoices_arr = invoiceServerObject.get_embedded().getInvoices();
+                                        invoices = new HashMap<>();
+                                        for (Invoice invoice : invoices_arr)
+                                            invoices.put(invoice.get_id(), invoice);
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Invoices in the database.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "InvoiceServerObject (containing Invoice objects & other metadata) is null");
+
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of invoices.");
+                                serialize(ROOT_PATH+filename, invoices);
+                            } else
+                            {
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object ["+ROOT_PATH+filename+"] on local disk is already up-to-date.");
+                                invoices = (HashMap<String, Invoice>) deserialize(ROOT_PATH+filename);
+                            }
+                        } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                    } else IO.logAndAlert("No active sessions.", "Active Session is invalid", IO.TAG_ERROR);
+                } catch (ClassNotFoundException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                }
+                return null;
+            }
+        };
     }
 
     public void requestInvoiceApproval(Invoice invoice, Callback callback) throws IOException
@@ -139,7 +133,7 @@ public class InvoiceManager extends MVGObjectManager
             IO.logAndAlert("Error", "Invalid Invoice Client object.", IO.TAG_ERROR);
             return;
         }
-        if(UserManager.getInstance().getUsers()==null)
+        if(UserManager.getInstance().getDataset()==null)
         {
             IO.logAndAlert("Error", "Could not find any users in the system.", IO.TAG_ERROR);
             return;
@@ -264,10 +258,22 @@ public class InvoiceManager extends MVGObjectManager
                     {
                         //TODO: CC self
                         IO.logAndAlert("Success", "Successfully requested Invoice approval!", IO.TAG_INFO);
+
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
+                        {
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
                         if(callback!=null)
                             callback.call(IO.readStream(connection.getInputStream()));
-                    } else {
+                    } else
+                    {
                         IO.logAndAlert( "ERROR " + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
+                        //execute callback w/o args
                         if(callback!=null)
                             callback.call(null);
                     }
@@ -298,19 +304,37 @@ public class InvoiceManager extends MVGObjectManager
         stage.setResizable(true);
     }
 
-    public void createInvoice(Trip trip, String quote_revs, double amount_receivable, Callback callback) throws IOException
+    /**
+     * Method to create Invoice in the database server
+     * @param trip Trip object associated with Invoice.
+     * @param quote_revision_numbers Quote revision number to be used to generated the invoice [uses quote_id of Trip class]
+     * @param amount_receivable Cash amount received for this Invoice.
+     * @param callback Callback to be executed after creation of the Invoice [if successful]
+     * @throws IOException
+     */
+    public void createInvoice(Trip trip, String quote_revision_numbers, double amount_receivable, Callback callback) throws IOException
     {
         if(trip.getQuote()==null)
         {
             IO.logAndAlert(getClass().getName(), "Trip->Quote object is not set.", IO.TAG_ERROR);
             return;
         }
-        if(quote_revs==null)
+        if(trip.getQuote().getEnquiry()==null)
+        {
+            IO.logAndAlert(getClass().getName(), "Trip->Quote->Enquiry object is not set.", IO.TAG_ERROR);
+            return;
+        }
+        if(trip.getQuote().getEnquiry().getCreatorUser()==null)
+        {
+            IO.logAndAlert(getClass().getName(), "Trip->Quote->Enquiry's creator could not be found.", IO.TAG_ERROR);
+            return;
+        }
+        if(quote_revision_numbers==null)
         {
             IO.logAndAlert(getClass().getName(), "Please select valid quote revisions for the new invoice.", IO.TAG_ERROR);
             return;
         }
-        if(quote_revs.isEmpty())
+        if(quote_revision_numbers.isEmpty())
         {
             IO.logAndAlert(getClass().getName(), "Invoice Quote revisions object is empty.", IO.TAG_ERROR);
             return;
@@ -329,6 +353,7 @@ public class InvoiceManager extends MVGObjectManager
                 invoice.setCreator(smgr.getActiveUser().getUsr());
                 invoice.setTrip_id(trip.get_id());
                 invoice.setReceivable(amount_receivable);
+                invoice.setClient_id(trip.getQuote().getEnquiry().getCreatorUser().getOrganisation_id());
 
                 HttpURLConnection response = RemoteComms.putJSON("/invoices", invoice.asJSONString(), headers);
                 if(response!=null)

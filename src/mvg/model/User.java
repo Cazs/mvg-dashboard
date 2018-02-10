@@ -159,7 +159,7 @@ public class User extends MVGObject implements Serializable
             return null;
         }
 
-        HashMap<String, Client> clients = ClientManager.getInstance().getClients();
+        HashMap<String, Client> clients = ClientManager.getInstance().getDataset();
         if(clients!=null)
         {
             return clients.get(getOrganisation_id());

@@ -33,6 +33,7 @@
                                 <fx:include source="MaterialsTab.fxml"/>
                                 <fx:include source="QuotesTab.fxml"/>
                                 <fx:include source="TripsTab.fxml"/>
+                                <fx:include source="InvoicesTab.fxml"/>
                                 <fx:include source="NotificationsTab.fxml"/>
                             </tabs>
                         </TabPane>

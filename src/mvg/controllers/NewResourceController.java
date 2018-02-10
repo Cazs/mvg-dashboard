@@ -46,7 +46,7 @@ public class NewResourceController extends ScreenController implements Initializ
     @Override
     public void refreshModel()
     {
-        ResourceManager.getInstance().loadDataFromServer();
+        ResourceManager.getInstance().initialize();
     }
 
     /**

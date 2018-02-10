@@ -93,7 +93,7 @@ public class LoginController extends ScreenController implements Initializable
                                 ssn_mgr.addSession(session);
 
                                 //load User data to memory
-                                UserManager.getInstance().loadDataFromServer();
+                                UserManager.getInstance().initialize();
 
                                 if (screenManager.loadScreen(Screens.HOME.getScreen(), MVG.class.getResource("views/" + Screens.HOME.getScreen())))
                                 {

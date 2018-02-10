@@ -49,7 +49,7 @@ public class Notification extends MVGObject implements Serializable
 
     public Client getClient()
     {
-        HashMap<String, Client> clients = ClientManager.getInstance().getClients();
+        HashMap<String, Client> clients = ClientManager.getInstance().getDataset();
         if(clients!=null)
         {
             return clients.get(client_id);

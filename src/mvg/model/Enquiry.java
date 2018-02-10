@@ -6,8 +6,15 @@ package mvg.model;
  * and open the template in the editor.
  */
 
+import javafx.beans.property.LongProperty;
+import javafx.beans.property.SimpleLongProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import mvg.auxilary.IO;
+import mvg.managers.ClientManager;
+
 import java.io.Serializable;
+import java.util.HashMap;
 
 /**
  *
@@ -84,6 +91,16 @@ public class Enquiry extends MVGObject implements Serializable
         this.date_scheduled = date_scheduled;
     }
 
+    public Client getClient()
+    {
+        HashMap<String, Client> clients = ClientManager.getInstance().getDataset();
+        if(clients!=null)
+        {
+            return clients.get(client_id);
+        }else IO.log(getClass().getName(), IO.TAG_ERROR, "no clients were found in database.");
+        return null;
+    }
+
     public String getClient_id()
     {
         return client_id;
@@ -93,6 +110,19 @@ public class Enquiry extends MVGObject implements Serializable
     {
         this.client_id = client_id;
     }
+
+    // Properties
+    public StringProperty client_nameProperty()
+    {
+        if(getClient()!=null)
+            return new SimpleStringProperty(getClient().getClient_name());
+        return new SimpleStringProperty("N/A");
+    }
+    public StringProperty pickup_locationProperty(){return new SimpleStringProperty(pickup_location);}
+    public StringProperty destinationProperty(){return new SimpleStringProperty(String.valueOf(destination));}
+    public StringProperty trip_typeProperty(){return new SimpleStringProperty(String.valueOf(trip_type));}
+    public StringProperty commentsProperty(){return new SimpleStringProperty(comments);}
+    public LongProperty date_scheduledProperty(){return new SimpleLongProperty(getDate_scheduled());}
 
     @Override
     public void parse(String var, Object val)
@@ -105,7 +135,7 @@ public class Enquiry extends MVGObject implements Serializable
                     setEnquiry((String)val);
                     break;
                 case "date_scheduled":
-                    setDate_scheduled(Long.parseLong((String)val));
+                    setDate_scheduled(Long.parseLong(String.valueOf(val)));
                     break;
                 case "pickup_location":
                     setPickup_location((String)val);

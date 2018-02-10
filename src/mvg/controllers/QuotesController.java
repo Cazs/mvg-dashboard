@@ -36,7 +36,7 @@ public class QuotesController extends ScreenController implements Initializable
     @FXML
     private TableView<Quote>    tblQuotes;
     @FXML
-    private TableColumn     colId, colClient, colSitename, colRequest, colContactPerson, colTotal,
+    private TableColumn     colId, colClient, colAddress, colDestination, colRequest, colContactPerson, colTotal,
                             colDateGenerated, colStatus, colCreator, colRevision,
                             colExtra,colAction;
     @FXML
@@ -47,19 +47,19 @@ public class QuotesController extends ScreenController implements Initializable
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading quotes view..");
 
-        if(UserManager.getInstance().getUsers()==null)
+        if(UserManager.getInstance().getDataset()==null)
         {
-            IO.logAndAlert(getClass().getName(), "no employees were found in the database.", IO.TAG_ERROR);
+            IO.logAndAlert(getClass().getSimpleName(), "No users were found in the database.", IO.TAG_ERROR);
             return;
         }
-        if(QuoteManager.getInstance().getQuotes()==null)
+        if(QuoteManager.getInstance().getDataset()==null)
         {
-            IO.logAndAlert(getClass().getName(), "no quotes were found in the database.", IO.TAG_ERROR);
+            IO.logAndAlert(getClass().getSimpleName(), "No quotes were found in the database.", IO.TAG_WARN);
             return;
         }
-        if(ClientManager.getInstance().getClients()==null)
+        if(ClientManager.getInstance().getDataset()==null)
         {
-            IO.logAndAlert(getClass().getName(), "no clients were found in the database.", IO.TAG_ERROR);
+            IO.logAndAlert(getClass().getSimpleName(), "No clients were found in the database.", IO.TAG_WARN);
             return;
         }
 
@@ -71,8 +71,10 @@ public class QuotesController extends ScreenController implements Initializable
         CustomTableViewControls.makeLabelledDatePickerTableColumn(colDateGenerated, "date_logged", false);
         colRequest.setMinWidth(120);
         colRequest.setCellValueFactory(new PropertyValueFactory<>("request"));
-        colSitename.setMinWidth(120);
-        colSitename.setCellValueFactory(new PropertyValueFactory<>("address"));
+        colAddress.setMinWidth(120);
+        colAddress.setCellValueFactory(new PropertyValueFactory<>("address"));
+        colDestination.setMinWidth(120);
+        colDestination.setCellValueFactory(new PropertyValueFactory<>("destination"));
         CustomTableViewControls.makeDynamicToggleButtonTableColumn(colStatus,100, "status", new String[]{"0","PENDING","1","APPROVED"}, false,"/quotes");
         colCreator.setCellValueFactory(new PropertyValueFactory<>("creator"));
         colRevision.setCellValueFactory(new PropertyValueFactory<>("revision"));
@@ -201,7 +203,7 @@ public class QuotesController extends ScreenController implements Initializable
                                                 @Override
                                                 public void run()
                                                 {
-                                                    QuoteManager.getInstance().setSelectedQuote(quote);
+                                                    QuoteManager.getInstance().setSelected(quote);
                                                     try
                                                     {
                                                         if(ScreenManager.getInstance().loadScreen(Screens.VIEW_QUOTE.getScreen(),mvg.MVG.class.getResource("views/"+Screens.VIEW_QUOTE.getScreen())))
@@ -268,10 +270,10 @@ public class QuotesController extends ScreenController implements Initializable
         colAction.setCellFactory(cellFactory);
 
         tblQuotes.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) ->
-                QuoteManager.getInstance().setSelectedQuote(tblQuotes.getSelectionModel().getSelectedItem()));
+                QuoteManager.getInstance().setSelected(tblQuotes.getSelectionModel().getSelectedItem()));
 
         HashMap<String, Quote> latest_rev_quotes = new HashMap<>();
-        for(Quote quote: QuoteManager.getInstance().getQuotes().values())
+        for(Quote quote: QuoteManager.getInstance().getDataset().values())
         {
             if(quote.getParent_id()!=null)//if quote has parent, i.e. siblings
             {
@@ -296,11 +298,11 @@ public class QuotesController extends ScreenController implements Initializable
     {
         IO.log(getClass().getName(), IO.TAG_INFO, "reloading quotes data model..");
 
-        UserManager.getInstance().loadDataFromServer();
-        ClientManager.getInstance().loadDataFromServer();
-        ResourceManager.getInstance().loadDataFromServer();
-        EnquiryManager.getInstance().loadDataFromServer();
-        QuoteManager.getInstance().loadDataFromServer();
+        UserManager.getInstance().initialize();
+        ClientManager.getInstance().initialize();
+        ResourceManager.getInstance().initialize();
+        EnquiryManager.getInstance().initialize();
+        QuoteManager.getInstance().initialize();
     }
 
     /**

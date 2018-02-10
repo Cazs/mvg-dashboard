@@ -62,8 +62,8 @@ public abstract class MVGObject implements Serializable
 
     public User getCreatorUser()
     {
-        UserManager.getInstance().loadDataFromServer();
-        HashMap<String, User> users = UserManager.getInstance().getUsers();
+        UserManager.getInstance().initialize();
+        HashMap<String, User> users = UserManager.getInstance().getDataset();
         if(users!=null)
             return users.get(getCreator());
         return null;

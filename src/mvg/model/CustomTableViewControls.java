@@ -2,6 +2,7 @@ package mvg.model;
 
 import mvg.auxilary.*;
 import mvg.managers.SessionManager;
+import mvg.managers.TripManager;
 import mvg.model.MVGObject;
 import mvg.model.ComboBoxTableCell;
 import mvg.model.DatePickerCell;
@@ -138,7 +139,13 @@ public class CustomTableViewControls
                 if(bo!=null)
                 {
                     bo.parse(property, event.getNewValue());
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 }
             });
         } else IO.log(TAG, IO.TAG_ERROR, "Null table column!");
@@ -157,7 +164,13 @@ public class CustomTableViewControls
                 if(bo!=null)
                 {
                     bo.parse(property, event.getNewValue());
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 }
             });
         } else IO.log(TAG, IO.TAG_ERROR, "Null table column!");
@@ -283,7 +296,13 @@ public class CustomTableViewControls
                         else IO.log(TAG, IO.TAG_ERROR, "new value [meant to be either generic/custom/unknown] is null.");
                     } else IO.log(TAG, IO.TAG_ERROR, "unknown class, attempting to set boolean value to MVGObject{"+bo.getClass().getName()+"}'s " + property + " property.");
 
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 });
                 return new SimpleObjectProperty<>(grid);
             });
@@ -354,7 +373,14 @@ public class CustomTableViewControls
                     else IO.log(TAG, IO.TAG_INFO, "attempting to set boolean value to FileMetadata's " + property + " property.");
 
                     bo.parse(property, newValue);
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 });
                 return new SimpleObjectProperty<>(grid);
             });
@@ -412,7 +438,13 @@ public class CustomTableViewControls
                         bo.parse(property, props[2]);
                         toggleButton.setText(props[3]);
                     }
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 });
                 return new SimpleObjectProperty<>(toggleButton);
             });
@@ -472,7 +504,13 @@ public class CustomTableViewControls
                         bo.parse(property, props[0]);
                     }
 
-                    RemoteComms.updateObjectOnServer(bo, property);
+                    try
+                    {
+                        RemoteComms.updateObjectOnServer(bo);
+                    } catch (IOException e)
+                    {
+                        IO.log(CustomTableViewControls.class.getName(), IO.TAG_ERROR, e.getMessage());
+                    }
                 });
                 return new SimpleObjectProperty<>(grid);
             });
@@ -561,6 +599,35 @@ public class CustomTableViewControls
         }
     }
 
+    public static void makeTripManagerAction(TableColumn<MVGObject, HBox> col, int min_width, String property)
+    {
+        if (col != null)
+        {
+            col.setMinWidth(min_width);
+            //col.setCellFactory(editable_control_callback);
+            col.setCellValueFactory((TableColumn.CellDataFeatures<MVGObject, HBox> param) ->
+            {
+                Trip trip = (Trip)param.getValue();
+
+                Button btnUsers = new Button("Assigned Drivers");
+                btnUsers.setOnAction(event ->
+                {
+                    mvg.managers.TripManager.showTripReps(trip);
+                });
+
+                HBox container = new HBox();
+                HBox.setMargin(btnUsers, new Insets(0,10,0,10));
+                container.setAlignment(Pos.CENTER);
+                container.setMinHeight(min_width);
+
+                return new SimpleObjectProperty<>(container);
+            });
+        } else
+        {
+            IO.log(TAG, IO.TAG_ERROR, "null table column!");
+        }
+    }
+    
     public static void printDocument(MVGObject bo, String property)
     {
         //Validate session - also done on server-side don't worry ;)

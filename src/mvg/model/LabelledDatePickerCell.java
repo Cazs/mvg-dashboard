@@ -6,6 +6,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -58,26 +59,6 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
         });
     }
 
-    public LabelledDatePickerCell(String property)
-    {
-        this.property = property;
-
-        formatter = new SimpleDateFormat("yyyy-MM-dd");
-        datePicker = new DatePicker();
-
-        datePicker.valueProperty().addListener((observable, oldVal, newVal)->
-        {
-            //System.out.println("\noldVal: " + oldVal + ", newVal: " + newVal + ", isShowing? " + datePicker.isShowing() + ", isFocused?" + datePicker.isFocused() + "\n");
-            //updateItem(datePicker.getValue().atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), isEmpty());
-            if(newVal!=null)
-            {
-                updateItem(newVal.atStartOfDay(ZoneId.systemDefault()).toEpochSecond(), isEmpty());
-                if (datePicker.isFocused() || datePicker.isShowing())
-                    commitEdit(newVal.atStartOfDay(ZoneId.systemDefault()).toEpochSecond());
-            }else IO.log(getClass().getName(), IO.TAG_ERROR, "new date picker value is null.");
-        });
-    }
-
     @Override
     public void commitEdit(Long newValue)
     {
@@ -86,7 +67,13 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
         if(bo!=null)
         {
             bo.parse(property, newValue);
-            RemoteComms.updateObjectOnServer(bo, property);
+            try
+            {
+                RemoteComms.updateObjectOnServer(bo);
+            } catch (IOException e)
+            {
+                IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+            }
         }else IO.log(getClass().getName(), IO.TAG_WARN, "TableRow MVGObject is null.");
     }
 
@@ -102,7 +89,13 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
         if(date>0 && getTableRow().getItem()!=null)
         {
             //render date
-            label.setText(String.valueOf(LocalDate.parse(formatter.format(new Date(date)))));
+            //some models use epoch seconds and some use epoch millis, convert the date accordingly
+            long real_date=0;
+            if(date.toString().length()<=10)//if less than 10 chars, then
+                real_date=date*1000;//is using epoch seconds
+            else real_date = date;//is using epoch millis
+
+            label.setText(String.valueOf(LocalDate.parse(formatter.format(new Date(real_date)))));//date is store in epoch seconds, convert to epoch millis
             //datePicker.setValue(LocalDate.parse(formatter.format(new Date(date))));
             //setText(formatter.format(new Date(date)));
             setGraphic(label);
@@ -115,7 +108,7 @@ public class LabelledDatePickerCell extends TableCell<MVGObject, Long>
     public void startEdit()
     {
         super.startEdit();
-        if (!isEmpty() && editable)
+        if (editable)
         {
             setGraphic(datePicker);
             datePicker.requestFocus();

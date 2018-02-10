@@ -34,13 +34,11 @@
          <right>
                   <HBox alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
                <children>
-                        <ImageView fx:id="btnBack" fitHeight="60.0" fitWidth="60.0" onMouseClicked="#previousScreen" pickOnBounds="true" preserveRatio="true" styleClass="btnPrev" />
-                        <ImageView fx:id="btnNext" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="btnNext" />
-                        <ImageView fitHeight="60.0" fitWidth="60.0" onMouseClicked="#showMain" pickOnBounds="true" preserveRatio="true" styleClass="btnHome">
-                     <image>
-                        <Image url="@../gfx/home_black.png" />
-                     </image>
-                  </ImageView>
+                    <ImageView fx:id="btnBack" fitHeight="60.0" fitWidth="60.0" onMouseClicked="#previousScreen" pickOnBounds="true" preserveRatio="true" styleClass="btnPrev" />
+                    <ImageView fx:id="btnNext" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="btnNext" />
+                    <ImageView fitHeight="60.0" fitWidth="60.0" onMouseClicked="#showMain" pickOnBounds="true" preserveRatio="true" styleClass="btnHome"/>
+                    <ImageView fitHeight="60.0" fitWidth="60.0" onMouseClicked="#showLogin" pickOnBounds="true" preserveRatio="true" styleClass="btnLogin" />
+                    <ImageView fitHeight="60.0" fitWidth="60.0" onMouseClicked="#forceSynchronise" pickOnBounds="true" preserveRatio="true" styleClass="btnRefresh" />
                </children>
                   </HBox>
          </right>

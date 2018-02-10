@@ -2,6 +2,7 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -11,7 +12,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import mvg.auxilary.*;
+import mvg.controllers.NavController;
 import mvg.model.CustomTableViewControls;
+import mvg.model.Resource;
+import mvg.model.ResourceType;
 import mvg.model.User;
 
 import java.io.File;
@@ -39,7 +43,11 @@ public class UserManager extends MVGObjectManager
     {
     }
 
-    public HashMap<String, User> getUsers(){return this.users;}
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
 
     public static UserManager getInstance()
     {
@@ -47,78 +55,86 @@ public class UserManager extends MVGObjectManager
     }
 
     @Override
-    public void initialize()
-    {
-        loadDataFromServer();
-    }
+    public HashMap<String, User> getDataset(){return this.users;}
 
-    public void loadDataFromServer()
+    @Override
+    Callback getSynchronisationCallback()
     {
-        try
+        return new Callback()
         {
-            if(users==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "clients object has already been set.");
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        try
-        {
-            SessionManager smgr = SessionManager.getInstance();
-            if(smgr.getActive()!=null)
+            @Override
+            public Object call(Object param)
             {
-                if(!smgr.getActive().isExpired())
+                //if first run, don't refresh model's data-set yet.
+                try
                 {
-                    gson  = new GsonBuilder().create();
-                    ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
-                    headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-
-                    String user_json_object = RemoteComms.sendGetRequest("/users", headers);
-                    UserServerObject userServerObject = gson.fromJson(user_json_object, UserServerObject.class);
-                    //User userObject = gson.fromJson(users_json, User.class);
-                    //System.out.println("Embedded: "+userObject.get_embedded());
-                    if(userServerObject!=null)
+                    if(!NavController.first_run)
                     {
-                        if(userServerObject.get_embedded()!=null)
+                        SessionManager smgr = SessionManager.getInstance();
+                        if (smgr.getActive() != null)
                         {
-                            User[] users_arr = userServerObject.get_embedded().get_users();
-                            /*System.out.println("User count: " + userServerObject.getPage().getTotalElements());
-                            System.out
-                                    .println("User link: " + userServerObject.get_links().getSelf().getHref());*/
+                            if (!smgr.getActive().isExpired())
+                            {
+                                gson = new GsonBuilder().create();
+                                ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+                                headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
 
-                            users = new HashMap();
-                            for (User user : users_arr)
-                                users.put(user.getUsr(), user);
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Users in database.");
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "UserServerObject (containing User objects & other metadata) is null");
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded user collection.");
-                } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-            } else IO.logAndAlert("Session Expired", "Active session is invalid", IO.TAG_ERROR);
-        } catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-        } catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-        }
+                                String user_json_object = RemoteComms.sendGetRequest("/users", headers);
+                                UserServerObject userServerObject = gson
+                                        .fromJson(user_json_object, UserServerObject.class);
+                                //User userObject = gson.fromJson(users_json, User.class);
+                                //System.out.println("Embedded: "+userObject.get_embedded());
+                                if (userServerObject != null)
+                                {
+                                    if (userServerObject.get_embedded() != null)
+                                    {
+                                        User[] users_arr = userServerObject.get_embedded().get_users();
+                                /*System.out.println("User count: " + userServerObject.getPage().getTotalElements());
+                                System.out
+                                        .println("User link: " + userServerObject.get_links().getSelf().getHref());*/
+
+                                        users = new HashMap();
+                                        for (User user : users_arr)
+                                            users.put(user.getUsr(), user);
+                                    }
+                                    else IO.log(getClass()
+                                            .getName(), IO.TAG_ERROR, "could not find any Users in database.");
+                                }
+                                else IO.log(getClass()
+                                        .getName(), IO.TAG_ERROR, "UserServerObject (containing User objects & other metadata) is null");
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded user collection.");
+                            }
+                            else IO.log("Session Expired", IO.TAG_ERROR, "Active session has expired.");
+                        }
+                        else IO.log("Session Expired", IO.TAG_ERROR, "Active session is invalid");
+                    }
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                }
+                return null;
+            }
+        };
     }
 
-    public void newExternalUserWindow(String title, Callback callback)
+    public void newExternalUserWindow(String title, String organisation_id, Callback callback)
     {
+        if(SessionManager.getInstance().getActive()==null)
+        {
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.\nPlease sign in.", IO.TAG_ERROR);
+            return;
+        }
+        if(SessionManager.getInstance().getActiveUser()==null)
+        {
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.\nPlease sign in.", IO.TAG_ERROR);
+            return;
+        }
+        if(SessionManager.getInstance().getActive().isExpired())
+        {
+            IO.logAndAlert("Error: Session Expired", "Active session has expired.\nPlease sign in.", IO.TAG_ERROR);
+            return;
+        }
+
         Stage stage = new Stage();
         stage.setTitle(Globals.APP_NAME.getValue() + " - " + title);
         stage.setMinWidth(320);
@@ -189,26 +205,45 @@ public class UserManager extends MVGObjectManager
             params.add(new AbstractMap.SimpleEntry<>("lastname", txtLastname.getText()));
             params.add(new AbstractMap.SimpleEntry<>("gender", "female"));
             params.add(new AbstractMap.SimpleEntry<>("email", txtEmail.getText()));
-
             params.add(new AbstractMap.SimpleEntry<>("tel", txtTelephone.getText()));
             params.add(new AbstractMap.SimpleEntry<>("cell", txtCellphone.getText()));
+            params.add(new AbstractMap.SimpleEntry<>("organisation_id", organisation_id));
+            params.add(new AbstractMap.SimpleEntry<>("creator", SessionManager.getInstance().getActiveUser().getUsr()));
 
             if(txtOther.getText()!=null)
                 params.add(new AbstractMap.SimpleEntry<>("other", txtOther.getText()));
 
             try
             {
-                HttpURLConnection connection = RemoteComms.putJSONData("/users", params, null);
+                ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+                headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
+                HttpURLConnection connection = RemoteComms.putJSONData("/users", params, headers);
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_OK)
                 {
                     IO.logAndAlert("Account Creation Success", "Successfully created new contact!", IO.TAG_INFO);
+
+                    //dismiss stage if successful
+                    Platform.runLater(() ->
+                    {
+                        if(stage!=null)
+                            if(stage.isShowing())
+                                stage.close();
+                    });
+
+                    //execute callback w/ args
                     if(callback!=null)
-                        callback.call(null);
+                        callback.call(IO.readStream(connection.getInputStream()));
                 } else
+                {
                     IO.logAndAlert("Account Creation Failure", IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
 
+                    //execute callback w/o args
+                    if(callback!=null)
+                        callback.call(null);
+                }
+
                 connection.disconnect();
-            }catch (IOException e)
+            } catch (IOException e)
             {
                 IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
             }
@@ -224,12 +259,12 @@ public class UserManager extends MVGObjectManager
 
         //Setup scene and display stage
         Scene scene = new Scene(vbox);
-        File fCss = new File("src/fadulousbms/styles/home.css");
+        File fCss = new File("src/mvg/styles/home.css");
         scene.getStylesheets().clear();
         scene.getStylesheets().add("file:///"+ fCss.getAbsolutePath().replace("\\", "/"));
 
         stage.onHidingProperty().addListener((observable, oldValue, newValue) ->
-                loadDataFromServer());
+                forceSynchronise());
 
         stage.setScene(scene);
         stage.show();
@@ -364,13 +399,30 @@ public class UserManager extends MVGObjectManager
                     if (connection.getResponseCode() == HttpURLConnection.HTTP_OK)
                     {
                         IO.logAndAlert("Account Creation Success", "Successfully created a new user!", IO.TAG_INFO);
+
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
+                        {
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
+                        if(callback!=null)
+                            callback.call(IO.readStream(connection.getInputStream()));
+                    } else
+                    {
+                        IO.logAndAlert("Account Creation Failure", IO
+                                .readStream(connection.getErrorStream()), IO.TAG_ERROR);
+                        //execute callback w/o args
                         if(callback!=null)
                             callback.call(null);
-                    } else
-                        IO.logAndAlert("Account Creation Failure", IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
-
-                    connection.disconnect();
-                }catch (IOException e)
+                    }
+                    //close connection
+                    if(connection!=null)
+                        connection.disconnect();
+                } catch (IOException e)
                 {
                     IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                 }
@@ -391,12 +443,12 @@ public class UserManager extends MVGObjectManager
 
         //Setup scene and display stage
         Scene scene = new Scene(vbox);
-        File fCss = new File("src/fadulousbms/styles/home.css");
+        File fCss = new File("src/mvg/styles/home.css");
         scene.getStylesheets().clear();
         scene.getStylesheets().add("file:///"+ fCss.getAbsolutePath().replace("\\", "/"));
 
         stage.onHidingProperty().addListener((observable, oldValue, newValue) ->
-                loadDataFromServer());
+                forceSynchronise());
 
         stage.setScene(scene);
         stage.show();

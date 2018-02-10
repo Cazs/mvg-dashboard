@@ -63,9 +63,9 @@ public class SessionManager
     
     public User getActiveUser()
     {
-        UserManager.getInstance().loadDataFromServer();
-        if(UserManager.getInstance().getUsers()!=null && this.active!=null)
-            return UserManager.getInstance().getUsers().get(this.active.getUsername());
+        UserManager.getInstance().initialize();
+        if(UserManager.getInstance().getDataset()!=null && this.active!=null)
+            return UserManager.getInstance().getDataset().get(this.active.getUsername());
         else return null;
     }
     

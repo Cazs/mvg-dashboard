@@ -6,7 +6,6 @@ import javafx.util.Callback;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.util.*;
 
 import mvg.auxilary.*;
@@ -20,7 +19,6 @@ public class EnquiryManager extends MVGObjectManager
     private HashMap<String, Enquiry> enquiries;
     private Gson gson;
     private static EnquiryManager enquiry_manager = new EnquiryManager();
-    private Enquiry selected_enquiry;
     private long timestamp;
     public static final String ROOT_PATH = "cache/enquiries/";
     public String filename = "";
@@ -30,148 +28,107 @@ public class EnquiryManager extends MVGObjectManager
     {
     }
 
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
+
     public static EnquiryManager getInstance()
     {
         return enquiry_manager;
     }
 
     @Override
-    public void initialize()
-    {
-        loadDataFromServer();
-    }
-
-    public HashMap<String, Enquiry> getEnquiries()
+    public HashMap<String, Enquiry> getDataset()
     {
         return enquiries;
     }
 
-    public void setSelectedEnquiry(Enquiry enquiry)
+    @Override
+    Callback getSynchronisationCallback()
     {
-        if(enquiry !=null)
+        return new Callback()
         {
-            this.selected_enquiry = enquiry;
-            IO.log(getClass().getName(), IO.TAG_INFO, "set selected enquiry to: " + selected_enquiry.get_id());
-        } else IO.log(getClass().getName(), IO.TAG_ERROR, "enquiry to be set as selected is null.");
-    }
-
-    public void setSelectedEnquiry(String enquiry_id)
-    {
-        if(enquiries==null)
-        {
-            IO.logAndAlert(getClass().getName(), IO.TAG_ERROR, "No enquiries were found on the database.");
-            return;
-        }
-        if(enquiries.get(enquiry_id)!=null)
-        {
-            setSelectedEnquiry(enquiries.get(enquiry_id));
-        }
-    }
-
-    public Enquiry getSelectedEnquiry()
-    {
-        /*if(selected_enquiry>-1)
-            return enquiries[selected_enquiry];
-        else return null;*/
-        return selected_enquiry;
-    }
-
-    public void nullifySelected()
-    {
-        this.selected_enquiry =null;
-    }
-
-    public void loadDataFromServer()
-    {
-        try
-        {
-            if(enquiries==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "enquiries object has already been set.");
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        //enquiries = null;
-        SessionManager smgr = SessionManager.getInstance();
-        if(smgr.getActive()!=null)
-        {
-            if(!smgr.getActive().isExpired())
+            @Override
+            public Object call(Object param)
             {
-
-                gson  = new GsonBuilder().create();
-                ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
-                headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-                //Get Timestamp
-                String enquiries_timestamp_json = RemoteComms.sendGetRequest("/timestamp/enquiries_timestamp", headers);
-                Counter enquiries_timestamp = gson.fromJson(enquiries_timestamp_json, Counter.class);
-                if(enquiries_timestamp!=null)
+                try
                 {
-                    timestamp = enquiries_timestamp.getCount();
-                    filename = "enquiries_"+timestamp+".dat";
-                    IO.log(EnquiryManager.getInstance().getClass().getName(), IO.TAG_INFO, "Server Timestamp: "+enquiries_timestamp.getCount());
-                } else {
-                    IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
-                    return;
-                }
-
-                if(!isSerialized(ROOT_PATH+filename))
-                {
-                    //Load Enquiries
-                    String enquiries_json = RemoteComms.sendGetRequest("/enquiries", headers);
-                    EnquiryServerObject enquiryServerObject = gson.fromJson(enquiries_json, EnquiryServerObject.class);
-                    if(enquiryServerObject!=null)
+                    SessionManager smgr = SessionManager.getInstance();
+                    if(smgr.getActive()!=null)
                     {
-                        if(enquiryServerObject.get_embedded()!=null)
+                        if(!smgr.getActive().isExpired())
                         {
-                            Enquiry[] enquiries_arr = enquiryServerObject.get_embedded().getEnquiries();
-                            enquiries = new HashMap<>();
-                            for (Enquiry enquiry : enquiries_arr)
-                                enquiries.put(enquiry.get_id(), enquiry);
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Enquiries in the database.");
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "EnquiryServerObject (containing Enquiry objects & other metadata) is null");
 
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of enquiries.");
-                    this.serialize(ROOT_PATH + filename, enquiries);
-                } else {
-                    IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object ["+ROOT_PATH+filename+"] on local disk is already up-to-date.");
-                    enquiries = (HashMap<String, Enquiry>) this.deserialize(ROOT_PATH+filename);
+                            gson  = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
+                            //Get Timestamp
+                            String enquiries_timestamp_json = RemoteComms.sendGetRequest("/timestamp/enquiries_timestamp", headers);
+                            Counter enquiries_timestamp = gson.fromJson(enquiries_timestamp_json, Counter.class);
+                            if(enquiries_timestamp!=null)
+                            {
+                                timestamp = enquiries_timestamp.getCount();
+                                filename = "enquiries_"+timestamp+".dat";
+                                IO.log(EnquiryManager.getInstance().getClass().getName(), IO.TAG_INFO, "Server Timestamp: "+enquiries_timestamp.getCount());
+                            } else {
+                                IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
+                                return null;
+                            }
+
+                            if(!isSerialized(ROOT_PATH+filename))
+                            {
+                                //Load Enquiries
+                                String enquiries_json = RemoteComms.sendGetRequest("/enquiries", headers);
+                                EnquiryServerObject enquiryServerObject = gson.fromJson(enquiries_json, EnquiryServerObject.class);
+                                if(enquiryServerObject!=null)
+                                {
+                                    if(enquiryServerObject.get_embedded()!=null)
+                                    {
+                                        Enquiry[] enquiries_arr = enquiryServerObject.get_embedded().getEnquiries();
+                                        enquiries = new HashMap<>();
+                                        for (Enquiry enquiry : enquiries_arr)
+                                            enquiries.put(enquiry.get_id(), enquiry);
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Enquiries in the database.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "EnquiryServerObject (containing Enquiry objects & other metadata) is null");
+
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of enquiries.");
+                                serialize(ROOT_PATH + filename, enquiries);
+                            } else {
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "binary object ["+ROOT_PATH+filename+"] on local disk is already up-to-date.");
+                                enquiries = (HashMap<String, Enquiry>) deserialize(ROOT_PATH+filename);
+                            }
+                        } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                    } else IO.logAndAlert("Invalid Session", "No valid active sessions were found.", IO.TAG_ERROR);
+                } catch (ClassNotFoundException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                 }
-            } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-        } else IO.logAndAlert("Invalid Session", "No valid active sessions were found.", IO.TAG_ERROR);
-    }
-
-    public void generatePDF() throws IOException
-    {
-        if(selected_enquiry !=null)
-            PDF.createEnquiryPDF(selected_enquiry);
-        else IO.logAndAlert("Error", "Please choose a valid enquiry.", IO.TAG_ERROR);
+                return null;
+            }
+        };
     }
 
     public void createEnquiry(Enquiry enquiry, Callback callback) throws IOException
     {
-        ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
-        headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
-        if(SessionManager.getInstance().getActive()!=null)
-            headers.add(new AbstractMap.SimpleEntry<>("Cookie", SessionManager.getInstance().getActive().getSessionId()));
-        else
+        if(SessionManager.getInstance().getActive()==null)
         {
-            IO.logAndAlert("Session Expired", "No active sessions.", IO.TAG_ERROR);
+            IO.logAndAlert("Error: Invalid Session", "Active session is invalid.\nPlease log in.", IO.TAG_ERROR);
             return;
         }
+        if(SessionManager.getInstance().getActive().isExpired())
+        {
+            IO.logAndAlert("Error: Session Expired", "Active session has expired.\nPlease log in.", IO.TAG_ERROR);
+            return;
+        }
+
+        ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+        headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
+        headers.add(new AbstractMap.SimpleEntry<>("Cookie", SessionManager.getInstance().getActive().getSessionId()));
 
         //create new enquiry on database
         HttpURLConnection connection = RemoteComms.putJSON("/enquiries", enquiry.asJSONString(), headers);
@@ -213,7 +170,7 @@ public class EnquiryManager extends MVGObjectManager
         } else IO.logAndAlert("New Enquiry Creation Failure", "Could not connect to server.", IO.TAG_ERROR);
     }
 
-    public void updateEnquiry(Enquiry enquiry)
+    public void updateEnquiry(Enquiry enquiry, Callback callback)
     {
         if (enquiry == null)
         {
@@ -261,12 +218,19 @@ public class EnquiryManager extends MVGObjectManager
                         }
 
                         IO.logAndAlert("Enquiry Manager","successfully updated Enquiry[" + enquiry.get_id() + "].", IO.TAG_INFO);
-                        loadDataFromServer();
+                        forceSynchronise();
+
+                        //execute callback w/ args
+                        if(callback!=null)
+                            callback.call(true);
                     } else
                     {
                         //Get error message
                         String msg = IO.readStream(connection.getErrorStream());
                         IO.logAndAlert("Error " + String.valueOf(connection.getResponseCode()), msg, IO.TAG_ERROR);
+                        //execute callback w/o args
+                        if(callback!=null)
+                            callback.call(null);
                     }
                     //Close connection
                     if (connection != null)

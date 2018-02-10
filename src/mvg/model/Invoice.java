@@ -23,6 +23,7 @@ import java.util.HashMap;
 public class Invoice extends MVGObject implements Serializable
 {
     private String trip_id;
+    private String client_id;
     private double receivable;
     private int status;
 
@@ -34,6 +35,16 @@ public class Invoice extends MVGObject implements Serializable
         if(trip.getQuote()==null)
             return "N/A";
         return trip.getQuote().getAccount_name();
+    }
+
+    public String getClient_id()
+    {
+        return client_id;
+    }
+
+    public void setClient_id(String client_id)
+    {
+        this.client_id = client_id;
     }
 
     public double getReceivable()
@@ -91,9 +102,9 @@ public class Invoice extends MVGObject implements Serializable
             IO.log(getClass().getName(), IO.TAG_ERROR, "trip_id is not set.");
             return null;
         }
-        if(TripManager.getInstance().getTrips()!=null)
+        if(TripManager.getInstance().getDataset()!=null)
         {
-            return TripManager.getInstance().getTrips().get(trip_id);
+            return TripManager.getInstance().getDataset().get(trip_id);
         } else IO.log(getClass().getName(), IO.TAG_ERROR, "No Trips were found in the database.");
         return null;
     }
@@ -171,6 +182,7 @@ public class Invoice extends MVGObject implements Serializable
         String super_json = super.asJSONString();
         String json_obj = super_json.substring(0, super_json.length()-1)//toString().length()-1 to ignore the last brace.
                 +",\"trip_id\":\""+getTrip_id()+"\""
+                +",\"client_id\":\""+getClient_id()+"\""
                 +",\"receivable\":\""+getReceivable()+"\"";
         if(getStatus()>0)
             json_obj+=",\"status\":\""+getStatus()+"\"";

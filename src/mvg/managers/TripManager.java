@@ -2,24 +2,20 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import mvg.MVG;
+import javafx.application.Platform;
 import mvg.auxilary.*;
 import mvg.model.*;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 
 /**
@@ -28,10 +24,8 @@ import java.util.HashMap;
 public class TripManager extends MVGObjectManager
 {
     private HashMap<String, Trip> trips;
-    private String[] genders=null, domains=null;
     private Gson gson;
     private static TripManager trip_manager = new TripManager();
-    private Trip selected_trip;
     public static final String TAG = "TripManager";
     public static final String ROOT_PATH = "cache/trips/";
     public String filename = "";
@@ -41,156 +35,135 @@ public class TripManager extends MVGObjectManager
     {
     }
 
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
+
     public static TripManager getInstance()
     {
         return trip_manager;
     }
 
     @Override
-    public void initialize()
-    {
-        //init genders
-        genders = new String[]{"Male", "Female"};
-
-        //init domains
-        domains = new String[]{"internal", "external"};
-
-        loadDataFromServer();
-    }
-
-    /**
-     * Method to load Trip objects from the server if they have not already been reloaded.
-     */
-    public void loadDataFromServer()
-    {
-        try
-        {
-            if(trips==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "trips object has already been set.");
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    /**
-     * Method to force synchronize Trip objects from the server with local storage.
-     * @throws ClassNotFoundException
-     * @throws IOException
-     */
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        SessionManager smgr = SessionManager.getInstance();
-        if(smgr.getActive()!=null)
-        {
-            if(!smgr.getActive().isExpired())
-            {
-                gson = new GsonBuilder().create();
-                ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
-                headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-
-                //Get Timestamp
-                String timestamp_json = RemoteComms.sendGetRequest("/timestamp/trips_timestamp", headers);
-                Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
-                if (cntr_timestamp != null)
-                {
-                    timestamp = cntr_timestamp.getCount();
-                    filename = "trips_" + timestamp + ".dat";
-                    IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
-                }
-                else
-                {
-                    IO.log(this.getClass().getName(), IO.TAG_ERROR, "could not get valid timestamp");
-                    return;
-                }
-
-                if (!isSerialized(ROOT_PATH + filename))
-                {
-                    //Load Trip objects from server
-                    String trips_json = RemoteComms.sendGetRequest("/trips", headers);
-                    TripServerObject tripServerObject = gson.fromJson(trips_json, TripServerObject.class);
-                    if (tripServerObject != null)
-                    {
-                        if (tripServerObject.get_embedded() != null)
-                        {
-                            Trip[] trips_arr = tripServerObject.get_embedded().getTrips();
-
-                            trips = new HashMap<>();
-                            for (Trip trip : trips_arr)
-                            {
-                                trips.put(trip.get_id(), trip);
-                            }
-                        }
-                        else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Trips in the database.");
-                    }
-                    if (trips != null)
-                    {
-                        for (Trip trip : trips.values())
-                        {
-                            //Load TripUser objects using Trip_id
-                            String trip_users_json = RemoteComms.sendGetRequest("/trips/users/" + trip.get_id(), headers);
-                            System.out.println(">>>>>>>>>>>>>trips: " + trip_users_json);
-                            if(trip_users_json!=null)
-                            {
-                                TripUserServerObject tripUserServerObject = gson.fromJson(trip_users_json, TripUserServerObject.class);
-                                if (tripUserServerObject != null)
-                                {
-                                    if(tripUserServerObject.get_embedded()!=null)
-                                    {
-                                        TripUser[] trip_users_arr = tripUserServerObject.get_embedded().getTripusers();
-                                        if (trip_users_arr != null)
-                                        {
-                                            // make User[] of same size as TripUser[]
-                                            User[] users_arr = new User[trip_users_arr.length];
-                                            // Load actual User objects from TripUser[] objects
-                                            int i = 0;
-                                            for (TripUser tripUser : trip_users_arr)
-                                                if (UserManager.getInstance().getUsers() != null)
-                                                    users_arr[i++] = UserManager.getInstance().getUsers().get(tripUser.getUsr());
-                                                else IO.log(getClass()
-                                                        .getName(), IO.TAG_ERROR, "no Users found in database.");
-                                            // Set User objects on to Trip object.
-                                            trip.setAssigned_users(users_arr);
-                                        } else IO.log(getClass()
-                                                .getName(), IO.TAG_ERROR, "could not load assigned Users for trip #" + trip
-                                                .get_id());
-
-                                    } else IO.log(getClass()
-                                            .getName(), IO.TAG_ERROR, "could not load assigned Users for trip #"
-                                            + trip.get_id()+". Could not find any TripUser documents in collection.");
-                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "invalid TripUserServerObject for Trip#"+trip.get_id());
-                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "Trip#"+trip.get_id() + " has no assigned Users.");
-                        }
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Trips in the database.");
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of trips.");
-                    this.serialize(ROOT_PATH + filename, trips);
-                } else
-                {
-                    IO.log(this.getClass()
-                            .getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
-                    trips = (HashMap<String, Trip>) this.deserialize(ROOT_PATH + filename);
-                }
-            } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-        } else IO.logAndAlert("Session Expired", "No valid active sessions found.", IO.TAG_ERROR);
-    }
-
-    /**
-     * Method to get a map of all Trips in the database.
-     * @return
-     */
-    public HashMap<String, Trip> getTrips()
+    public HashMap<String, Trip> getDataset()
     {
         return this.trips;
+    }
+
+    @Override
+    Callback getSynchronisationCallback()
+    {
+        return new Callback()
+        {
+            @Override
+            public Object call(Object param)
+            {
+                try
+                {
+                    SessionManager smgr = SessionManager.getInstance();
+                    if(smgr.getActive()!=null)
+                    {
+                        if(!smgr.getActive().isExpired())
+                        {
+                            gson = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
+
+                            //Get Timestamp
+                            String timestamp_json = RemoteComms.sendGetRequest("/timestamp/trips_timestamp", headers);
+                            Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
+                            if (cntr_timestamp != null)
+                            {
+                                timestamp = cntr_timestamp.getCount();
+                                filename = "trips_" + timestamp + ".dat";
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
+                            }
+                            else
+                            {
+                                IO.log(this.getClass().getName(), IO.TAG_ERROR, "could not get valid timestamp");
+                                return null;
+                            }
+
+                            if (!isSerialized(ROOT_PATH + filename))
+                            {
+                                //Load Trip objects from server
+                                String trips_json = RemoteComms.sendGetRequest("/trips", headers);
+                                TripServerObject tripServerObject = gson.fromJson(trips_json, TripServerObject.class);
+                                if (tripServerObject != null)
+                                {
+                                    if (tripServerObject.get_embedded() != null)
+                                    {
+                                        Trip[] trips_arr = tripServerObject.get_embedded().getTrips();
+
+                                        trips = new HashMap<>();
+                                        for (Trip trip : trips_arr)
+                                        {
+                                            trips.put(trip.get_id(), trip);
+                                        }
+                                    }
+                                    else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Trips in the database.");
+                                }
+                                if (trips != null)
+                                {
+                                    for (Trip trip : trips.values())
+                                    {
+                                        //Load TripDriver objects using Trip_id
+                                        String trip_users_json = RemoteComms.sendGetRequest("/trips/drivers/" + trip.get_id(), headers);
+                                        if(trip_users_json!=null)
+                                        {
+                                            TripUserServerObject tripUserServerObject = gson.fromJson(trip_users_json, TripUserServerObject.class);
+                                            if (tripUserServerObject != null)
+                                            {
+                                                if(tripUserServerObject.get_embedded()!=null)
+                                                {
+                                                    TripDriver[] trip_users_arr = tripUserServerObject.get_embedded().getTripusers();
+                                                    if (trip_users_arr != null)
+                                                    {
+                                                        // make User[] of same size as TripDriver[]
+                                                        User[] users_arr = new User[trip_users_arr.length];
+                                                        // Load actual User objects from TripDriver[] objects
+                                                        int i = 0;
+                                                        for (TripDriver tripDriver : trip_users_arr)
+                                                            if (UserManager.getInstance().getDataset() != null)
+                                                                users_arr[i++] = UserManager.getInstance().getDataset().get(tripDriver
+                                                                        .getUsr());
+                                                            else IO.log(getClass()
+                                                                    .getName(), IO.TAG_ERROR, "no Users found in database.");
+                                                        // Set User objects on to Trip object.
+                                                        trip.setAssigned_users(users_arr);
+                                                    } else IO.log(getClass()
+                                                            .getName(), IO.TAG_ERROR, "could not load assigned Drivers for trip #" + trip
+                                                            .get_id());
+
+                                                } else IO.log(getClass()
+                                                        .getName(), IO.TAG_ERROR, "could not load assigned Drivers for trip #"
+                                                        + trip.get_id()+". Could not find any TripDriver documents in collection.");
+                                            } else IO.log(getClass().getName(), IO.TAG_ERROR, "invalid TripDriverServerObject for Trip#"+trip.get_id());
+                                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "Trip#"+trip.get_id() + " has no assigned Users.");
+                                    }
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Trips in the database.");
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of trips.");
+                                serialize(ROOT_PATH + filename, trips);
+                            } else
+                            {
+                                IO.log(this.getClass()
+                                        .getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
+                                trips = (HashMap<String, Trip>) deserialize(ROOT_PATH + filename);
+                            }
+                        } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                    } else IO.logAndAlert("Session Expired", "No valid active sessions found.", IO.TAG_ERROR);
+                } catch (ClassNotFoundException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                }
+                return null;
+            }
+        };
     }
 
     /**
@@ -220,18 +193,26 @@ public class TripManager extends MVGObjectManager
                     new_trip_id = new_trip_id.replaceAll(" ","");//strip whitespace chars
                     IO.log(getClass().getName(), IO.TAG_INFO, "successfully created a new trip: " + new_trip_id);
 
-                    TripManager.getInstance().reloadDataFromServer();
-                    if(callback!=null)
-                        callback.call(new_trip_id);
+                    TripManager.getInstance().forceSynchronise();
 
                     if(connection!=null)
                         connection.disconnect();
+
+                    //execute Callback w/ args
+                    if(callback!=null)
+                        callback.call(new_trip_id);
+
                     return new_trip_id;
                 } else
                 {
                     //Get error message
                     String msg = IO.readStream(connection.getErrorStream());
                     IO.logAndAlert("Error " +String.valueOf(connection.getResponseCode()), msg, IO.TAG_ERROR);
+
+                    //execute Callback w/o args
+                    if(callback!=null)
+                        callback.call(null);
+
                     if(connection!=null)
                         connection.disconnect();
                     return null;
@@ -240,87 +221,8 @@ public class TripManager extends MVGObjectManager
         } catch (IOException e)
         {
             IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-        } catch (ClassNotFoundException e)
-        {
-            e.printStackTrace();
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
         }
         return null;
-    }
-
-    /**
-     * Method to set the currently selected Trip object.
-     * @param trip Trip object to be set as selected Trip object.
-     */
-    public void setSelected(Trip trip)
-    {
-        this.selected_trip = trip;
-        if(selected_trip!=null)
-            IO.log(getClass().getName(), IO.TAG_INFO, "set selected trip to: " + trip);
-        //}else IO.log(getClass().getName(), IO.TAG_ERROR, "trip to be set as selected is null.");
-    }
-
-    /**
-     * Method to return the currently selected Trip object.
-     * @return selected Trip object.
-     */
-    public Trip getSelected()
-    {
-        return selected_trip;
-    }
-
-    /**
-     * Assign Users to a Trip.
-     * @param trip_id Object identifier of Trip to be assigned Users.
-     * @param usr username of User to be assigned to Trip.
-     * @return boolean value determining if assingnment was un/successful.
-     */
-    public static boolean createTripRepresentative(String trip_id, String usr)
-    {
-        try
-        {
-            ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
-            headers.add(new AbstractMap.SimpleEntry<>("Cookie", SessionManager.getInstance().getActive().getSessionId()));
-            headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
-
-            /*ArrayList<AbstractMap.SimpleEntry<String, String>> params = new ArrayList<>();
-            params.add(new AbstractMap.SimpleEntry<>("trip_id", trip_id));
-            params.add(new AbstractMap.SimpleEntry<>("usr", usr));*/
-
-            /*String trip_user_object = URLEncoder.encode("trip_id", "UTF-8") + "="
-                                        + URLEncoder.encode(trip_id, "UTF-8")
-                                        + "&" + URLEncoder.encode("usr", "UTF-8") + "="
-                                        + URLEncoder.encode(usr, "UTF-8");*/
-            String trip_user_object =    "{\"trip_id\":\"" +trip_id
-                                            +"\",\"usr\":\""+usr
-                                            +"\",\"creator\":\""+SessionManager.getInstance().getActive().getUsername()+"\"}";
-            //create new trip on database
-            HttpURLConnection connection = RemoteComms.putJSON("/trips/users", trip_user_object, headers);
-            if(connection!=null)
-            {
-                if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
-                {
-                    String response = IO.readStream(connection.getInputStream());
-                    IO.log("Trip Manager", IO.TAG_INFO, "successfully created a new trip representative: " + response);
-                    //IO.logAndAlert("Trip Manager", "Successfully created a new trip.", IO.TAG_INFO);
-                    if(connection!=null)
-                        connection.disconnect();
-                    return true;
-                } else
-                {
-                    //Get error message
-                    String msg = IO.readStream(connection.getErrorStream());
-                    IO.logAndAlert("Error " +String.valueOf(connection.getResponseCode()), msg, IO.TAG_ERROR);
-                    if(connection!=null)
-                        connection.disconnect();
-                    return false;
-                }
-            }else IO.logAndAlert("Trip Representative Creation Failure", "Could not connect to server.", IO.TAG_ERROR);
-        } catch (IOException e)
-        {
-            IO.logAndAlert("Trips Manager", e.getMessage(), IO.TAG_ERROR);
-        }
-        return false;
     }
 
     /**
@@ -341,11 +243,28 @@ public class TripManager extends MVGObjectManager
             IO.logAndAlert("Error: Trip Start Date Invalid", "Selected Trip has not been started yet.", IO.TAG_ERROR);
             return;
         }*/
+
+        trip.setStatus(MVGObject.STATUS_APPROVED);
+        updateTrip(trip, callback);
+    }
+
+    public static void updateTrip(Trip trip, Callback callback)
+    {
+        if(trip==null)
+        {
+            IO.logAndAlert("Error: Invalid Trip", "Selected Trip object is invalid.", IO.TAG_ERROR);
+            return;
+        }
+        //TODO: stricter validation before approval
+        /*if(trip.getDate_started()<=0)
+        {
+            IO.logAndAlert("Error: Trip Start Date Invalid", "Selected Trip has not been started yet.", IO.TAG_ERROR);
+            return;
+        }*/
         ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<AbstractMap.SimpleEntry<String, String>>();
         headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
 
         Session active = SessionManager.getInstance().getActive();
-        trip.setStatus(MVGObject.STATUS_APPROVED);
         try
         {
             if (active != null)
@@ -360,13 +279,94 @@ public class TripManager extends MVGObjectManager
                         {
                             if (conn.getResponseCode() == HttpURLConnection.HTTP_OK)
                             {
-                                IO.logAndAlert("Success", "Successfully approved Trip[" + trip.get_id() + "]", IO.TAG_INFO);
+                                IO.logAndAlert("Success", "Successfully updated Trip[" + trip.get_id() + "]", IO.TAG_INFO);
+                                //execute callback w/ params
+                                if (callback != null)
+                                    callback.call(true);
+                            } else
+                            {
+                                IO.logAndAlert("Error", "Could not update Trip[" + trip.get_id() + "]: "
+                                        + IO.readStream(conn.getErrorStream()), IO.TAG_ERROR);
+
+                                //execute callback w/o params
                                 if (callback != null)
                                     callback.call(null);
-                            } else IO.logAndAlert("Error", "Could not approve Trip[" + trip.get_id() + "]: "
-                                    + IO.readStream(conn.getErrorStream()), IO.TAG_ERROR);
+                            }
                             conn.disconnect();
                         } else IO.logAndAlert("Error", "Connection to server has been lost..", IO.TAG_ERROR);
+                    } else IO.logAndAlert("Error: Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                } else IO.logAndAlert("Error: Unauthorised", "Active session is not authorised to perform this action.", IO.TAG_ERROR);
+            } else IO.logAndAlert("Error: Session Expired", "No active sessions.", IO.TAG_ERROR);
+        } catch (IOException e)
+        {
+            IO.log(TripManager.class.getName(), IO.TAG_ERROR, e.getMessage());
+        }
+    }
+
+    public static void assignTripDrivers(Trip trip, User[] drivers, Callback callback)
+    {
+        if(trip==null)
+        {
+            IO.logAndAlert("Error: Invalid Trip", "Selected Trip object is invalid.", IO.TAG_ERROR);
+            return;
+        }
+        if(drivers==null)
+        {
+            IO.logAndAlert("Error: Invalid Drivers List", "No drivers were chosen to be assigned to trip #"+ trip.get_id(), IO.TAG_ERROR);
+            return;
+        }
+
+        ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<AbstractMap.SimpleEntry<String, String>>();
+        headers.add(new AbstractMap.SimpleEntry<>("Content-Type", "application/json"));
+
+        Session active = SessionManager.getInstance().getActive();
+        trip.setStatus(MVGObject.STATUS_APPROVED);
+        try
+        {
+            if (active != null)
+            {
+                if(SessionManager.getInstance().getActiveUser().getAccessLevel()>=AccessLevels.SUPERUSER.getLevel())
+                {
+                    if (!active.isExpired())
+                    {
+                        headers.add(new AbstractMap.SimpleEntry<>("Cookie", active.getSessionId()));
+
+                        //create TripDriver objects on server
+                        boolean all_successful=true;
+                        for(User driver: drivers)
+                        {
+                            TripDriver trip_driver = new TripDriver();
+                            trip_driver.setTrip_id(trip.get_id());
+                            trip_driver.setUsr(driver.getUsr());
+                            trip_driver.setCreator(active.getUsername());
+
+                            HttpURLConnection conn = RemoteComms
+                                    .putJSON(trip_driver.apiEndpoint(), trip_driver.asJSONString(), headers);
+                            if (conn != null)
+                            {
+                                if (conn.getResponseCode() != HttpURLConnection.HTTP_OK)
+                                {
+                                    IO.logAndAlert("Error", "Could not assign drivers to Trip[" + trip.get_id() + "]: "
+                                            + IO.readStream(conn.getErrorStream()), IO.TAG_ERROR);
+                                    all_successful=false;
+                                }
+                                conn.disconnect();
+                            } else IO.logAndAlert("Error", "Connection to server has been lost..", IO.TAG_ERROR);
+                        }
+                        if(all_successful)
+                        {
+                            IO.logAndAlert("Success", "Successfully assigned [" + drivers.length + "] drivers to Trip[" + trip
+                                    .get_id() + "]", IO.TAG_INFO);
+
+                            //update Trips date_assigned property
+                            trip.setDate_assigned(System.currentTimeMillis());
+                            updateTrip(trip, callback);
+                            /*//execute callback
+                            if (callback != null)
+                                callback.call(true);*/
+                        }//error message would've been shown in the loop already
+                        else if (callback != null)
+                                callback.call(null);
                     } else IO.logAndAlert("Error: Session Expired", "Active session has expired.", IO.TAG_ERROR);
                 } else IO.logAndAlert("Error: Unauthorised", "Active session is not authorised to perform this action.", IO.TAG_ERROR);
             } else IO.logAndAlert("Error: Session Expired", "No active sessions.", IO.TAG_ERROR);
@@ -393,7 +393,7 @@ public class TripManager extends MVGObjectManager
             IO.logAndAlert("Error", "Invalid Trip->Quote->Client.", IO.TAG_ERROR);
             return;
         }
-        if(UserManager.getInstance().getUsers()==null)
+        if(UserManager.getInstance().getDataset()==null)
         {
             IO.logAndAlert("Error", "Could not find any users in the system.", IO.TAG_ERROR);
             return;
@@ -516,10 +516,24 @@ public class TripManager extends MVGObjectManager
                     {
                         //TODO: CC self
                         IO.logAndAlert("Success", "Successfully requested Trip approval!", IO.TAG_INFO);
+
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
+                        {
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
+                        if(callback!=null)
+                            callback.call(true);
+                    } else
+                    {
+                        IO.logAndAlert( "ERROR " + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
+                        //execute callbacks w/o args
                         if(callback!=null)
                             callback.call(null);
-                    } else {
-                        IO.logAndAlert( "ERROR " + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
                     }
                     connection.disconnect();
                 }
@@ -617,10 +631,10 @@ public class TripManager extends MVGObjectManager
                 //make fancy "New representative" label - not really necessary though
                 if(trips!=null)
                 {
-                    if(trip.getAssigned_users()!=null)
+                    if(trip.getAssigned_drivers()!=null)
                     {
-                       lst_trip_reps.addAll(trip.getAssigned_users());
-                       IO.log(TAG, IO.TAG_INFO, String.format("trip '%s'  has %s representatives.", trip.get_id(), trip.getAssigned_users().length));
+                       lst_trip_reps.addAll(trip.getAssigned_drivers());
+                       IO.log(TAG, IO.TAG_INFO, String.format("trip '%s'  has %s representatives.", trip.get_id(), trip.getAssigned_drivers().length));
                        IO.log(TAG, IO.TAG_INFO, String.format("added trip '%s' representatives.", trip.get_id()));
                         /*for (BusinessObject businessObject : organisations)
                         {
@@ -722,14 +736,14 @@ public class TripManager extends MVGObjectManager
 
         class Embedded
         {
-            private TripUser[] tripusers;
+            private TripDriver[] tripusers;
 
-            public TripUser[] getTripusers()
+            public TripDriver[] getTripusers()
             {
                 return tripusers;
             }
 
-            public void setTripusers(TripUser[] tripusers)
+            public void setTripusers(TripDriver[] tripusers)
             {
                 this.tripusers = tripusers;
             }

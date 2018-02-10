@@ -2,8 +2,12 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import javafx.util.Callback;
+import mvg.auxilary.Counters;
 import mvg.auxilary.IO;
 import mvg.auxilary.RemoteComms;
+import mvg.model.MVGObject;
+import mvg.model.Notification;
 import mvg.model.User;
 
 import javax.imageio.ImageIO;
@@ -14,6 +18,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import mvg.MVG;
 
 public class SlideshowManager extends MVGObjectManager
@@ -27,6 +33,28 @@ public class SlideshowManager extends MVGObjectManager
     {
     }
 
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
+
+    public static SlideshowManager getInstance()
+    {
+        return slideshowManager;
+    }
+
+    public String[] getImagePaths()
+    {
+        return image_paths;
+    }
+
+    @Override
+    public HashMap<String, ? extends MVGObject> getDataset()
+    {
+        return null;
+    }
+
     public void setCurrentIndex(int index)
     {
         this.current_index=index;
@@ -38,94 +66,61 @@ public class SlideshowManager extends MVGObjectManager
     }
 
     @Override
-    public void initialize()
+    Callback getSynchronisationCallback()
     {
-        loadDataFromServer();
-    }
-
-    public static SlideshowManager getInstance()
-    {
-        return slideshowManager;
-    }
-
-    public void loadDataFromServer()
-    {
-        try
+        return new Callback()
         {
-            if(image_paths==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "image_paths object has already been set.");
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        try
-        {
-            if(new File("images/slider/").mkdirs())
-                IO.log(getClass().getName(), IO.TAG_ERROR, "successfully created [images/slider/] directory.");
-            
-            SessionManager smgr = SessionManager.getInstance();
-            if(smgr.getActive()!=null)
+            @Override
+            public Object call(Object param)
             {
-                if(!smgr.getActive().isExpired())
+                try
                 {
-                    gson  = new GsonBuilder().create();
-                    ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
-                    headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
+                    if(new File("images/slider/").mkdirs())
+                        IO.log(getClass().getName(), IO.TAG_ERROR, "successfully created [images/slider/] directory.");
 
-                    String slider_images_listing = RemoteComms.sendGetRequestByURL(RemoteComms.webserver_url+"/api/images/slider", headers);
-
-                    image_paths = gson.fromJson(slider_images_listing, String[].class);
-                    for(String img_filename: image_paths)
+                    SessionManager smgr = SessionManager.getInstance();
+                    if(smgr.getActive()!=null)
                     {
-                        //if(!new File(new File(".").getCanonicalPath() + "/images/slider/" + img_filename).exists())
-                        if(MVG.class.getResource("images/slider/" + img_filename)==null)
+                        if(!smgr.getActive().isExpired())
                         {
-                            long start = System.currentTimeMillis();
+                            gson  = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String,String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
 
-                            byte[] img = RemoteComms.sendFileRequestByURL(RemoteComms.webserver_url+"/api/images/slider/" + img_filename, headers);
-                           
-                            FileOutputStream out = new FileOutputStream(new File("images/slider/"+img_filename));
-                            out.write(img);
-                            out.flush();
-                            out.close();
+                            String slider_images_listing = RemoteComms.sendGetRequestByURL(RemoteComms.webserver_url+"/api/images/slider", headers);
 
-                            IO.log(getClass()
-                                    .getName(), IO.TAG_INFO, "downloaded [" + img_filename + ", " + img.length + " bytes] in [" + (System
-                                    .currentTimeMillis() - start) + "] msec");
-                        } else IO.log(getClass().getName(), IO.TAG_INFO, "file [/images/slider/"+img_filename+"] already exists.");
+                            image_paths = gson.fromJson(slider_images_listing, String[].class);
+                            for(String img_filename: image_paths)
+                            {
+                                if(!new File("images/slider/" + img_filename).exists())//if the image doesn't exist, then download it.
+                                {
+                                    long start = System.currentTimeMillis();
+
+                                    byte[] img = RemoteComms.sendFileRequestByURL(RemoteComms.webserver_url+"/api/images/slider/" + img_filename, headers);
+
+                                    FileOutputStream out = new FileOutputStream(new File("images/slider/"+img_filename));
+                                    out.write(img);
+                                    out.flush();
+                                    out.close();
+
+                                    IO.log(getClass()
+                                            .getName(), IO.TAG_INFO, "downloaded [" + img_filename + ", " + img.length + " bytes] in [" + (System
+                                            .currentTimeMillis() - start) + "] msec");
+                                } else IO.log(getClass().getName(), IO.TAG_INFO, "file [/images/slider/"+img_filename+"] already exists, no downloading.");
+                            }
+                            IO.log(getClass().getName(), IO.TAG_INFO, "reloaded slideshow collection.");
+                        }else{
+                            IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                        }
+                    }else{
+                        IO.logAndAlert("Session Expired", "No active sessions were found.", IO.TAG_ERROR);
                     }
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded slideshow collection.");
-                }else{
-                    IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                 }
-            }else{
-                IO.logAndAlert("Session Expired", "No active sessions were found.", IO.TAG_ERROR);
+                return null;
             }
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-        }
-    }
-
-    public String[] getImagePaths()
-    {
-        return image_paths;
+        };
     }
 }

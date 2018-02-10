@@ -31,7 +31,7 @@ public class Quote extends MVGObject
 
     public Enquiry getEnquiry()
     {
-        HashMap<String, Enquiry> enquiries = EnquiryManager.getInstance().getEnquiries();
+        HashMap<String, Enquiry> enquiries = EnquiryManager.getInstance().getDataset();
         if(enquiries!=null)
         {
             return enquiries.get(getEnquiry_id());
@@ -125,8 +125,8 @@ public class Quote extends MVGObject
             return null;
         else
         {
-            QuoteManager.getInstance().loadDataFromServer();
-            return QuoteManager.getInstance().getQuotes().get(parent_id);
+            QuoteManager.getInstance().initialize();
+            return QuoteManager.getInstance().getDataset().get(parent_id);
         }
     }
 
@@ -173,7 +173,7 @@ public class Quote extends MVGObject
 
     public Client getClient()
     {
-        HashMap<String, Client> clients = ClientManager.getInstance().getClients();
+        HashMap<String, Client> clients = ClientManager.getInstance().getDataset();
         if(clients!=null)
         {
             return clients.get(client_id);
@@ -183,8 +183,8 @@ public class Quote extends MVGObject
 
     public User getContact_person()
     {
-        UserManager.getInstance().loadDataFromServer();
-        HashMap<String, User> employees = UserManager.getInstance().getUsers();
+        UserManager.getInstance().initialize();
+        HashMap<String, User> employees = UserManager.getInstance().getDataset();
         if(employees!=null)
         {
             return employees.get(contact_person_id);
@@ -206,11 +206,11 @@ public class Quote extends MVGObject
         siblings.put(this.getRevision(), this);//make self be first child of requested siblings
         if(getParent_id()!=null)
         {
-            QuoteManager.getInstance().loadDataFromServer();
+            QuoteManager.getInstance().initialize();
             siblings.put(getParent().getRevision(), getParent());//make parent_id be second child of requested siblings
-            if (QuoteManager.getInstance().getQuotes() != null)
+            if (QuoteManager.getInstance().getDataset() != null)
             {
-                for (Quote quote : QuoteManager.getInstance().getQuotes().values())
+                for (Quote quote : QuoteManager.getInstance().getDataset().values())
                     if (getParent_id().equals(quote.getParent_id()))
                         siblings.put(quote.getRevision(), quote);
             }
@@ -236,10 +236,10 @@ public class Quote extends MVGObject
     public HashMap<Double, Quote> getChildrenMap()
     {
         HashMap<Double, Quote> children = new HashMap<>();
-        QuoteManager.getInstance().loadDataFromServer();
-        if (QuoteManager.getInstance().getQuotes() != null)
+        QuoteManager.getInstance().initialize();
+        if (QuoteManager.getInstance().getDataset() != null)
         {
-            for (Quote quote : QuoteManager.getInstance().getQuotes().values())
+            for (Quote quote : QuoteManager.getInstance().getDataset().values())
                 if(quote.getParent_id()!=null)
                     if (quote.getParent_id().equals(get_id()))
                         children.put(quote.getRevision(), quote);

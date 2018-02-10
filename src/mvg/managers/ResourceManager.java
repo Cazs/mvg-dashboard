@@ -2,6 +2,7 @@ package mvg.managers;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -11,16 +12,11 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import mvg.auxilary.*;
-import mvg.managers.MVGObjectManager;
-import mvg.model.CustomTableViewControls;
-import mvg.model.Resource;
-import mvg.model.ResourceType;
-import mvg.model.Type;
+import mvg.model.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +28,6 @@ public class ResourceManager extends MVGObjectManager
 {
     private HashMap<String, Resource> resources;//resources that have been approved/acquired/delivered
     private HashMap<String, Resource> all_resources;
-    private Resource selected;
     private Gson gson;
     private static ResourceManager resource_manager = new ResourceManager();
     private HashMap<String, ResourceType> resource_types;
@@ -45,16 +40,19 @@ public class ResourceManager extends MVGObjectManager
     {
     }
 
+    @Override
+    public void initialize()
+    {
+        synchroniseDataset();
+    }
+
     public static ResourceManager getInstance()
     {
         return resource_manager;
     }
 
-    /**
-     *
-     * @return Approved Resource objects.
-     */
-    public HashMap<String, Resource> getResources()
+    @Override
+    public HashMap<String, Resource> getDataset()
     {
         return resources;
     }
@@ -64,144 +62,119 @@ public class ResourceManager extends MVGObjectManager
         return all_resources;
     }
 
-    public void setAll_resources(HashMap<String, Resource> all_resources)
-    {
-        this.all_resources = all_resources;
-    }
-
-    public void setSelected(Resource resource)
-    {
-        this.selected=resource;
-    }
-
-    public Resource getSelected()
-    {
-        return this.selected;
-    }
-
     public HashMap<String, ResourceType> getResource_types()
     {
         return resource_types;
     }
 
     @Override
-    public void initialize()
+    Callback getSynchronisationCallback()
     {
-        loadDataFromServer();
-    }
-
-    public void loadDataFromServer()
-    {
-        try
+        return new Callback()
         {
-            if(resources==null)
-                reloadDataFromServer();
-            else IO.log(getClass().getName(), IO.TAG_INFO, "clients object has already been set.");
-        }catch (MalformedURLException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-        }catch (ClassNotFoundException e)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-        }catch (IOException ex)
-        {
-            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-        }
-    }
-
-    public void reloadDataFromServer() throws ClassNotFoundException, IOException
-    {
-        SessionManager smgr = SessionManager.getInstance();
-        if (smgr.getActive() != null)
-        {
-            if (!smgr.getActive().isExpired())
+            @Override
+            public Object call(Object param)
             {
-                gson = new GsonBuilder().create();
-                ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
-                headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
-
-                //Get Timestamp
-                String timestamp_json = RemoteComms
-                        .sendGetRequest("/timestamp/resources_timestamp", headers);
-                Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
-                if (cntr_timestamp != null)
+                try
                 {
-                    timestamp = cntr_timestamp.getCount();
-                    filename = "resources_" + timestamp + ".dat";
-                    IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
-                }
-                else
-                {
-                    IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
-                    return;
-                }
-
-                if (!isSerialized(ROOT_PATH + filename))
-                {
-                    String resources_json = RemoteComms.sendGetRequest("/resources", headers);
-                    ResourceServerObject resources_server_object = gson.fromJson(resources_json, ResourceServerObject.class);
-
-                    if(resources_server_object!=null)
+                    SessionManager smgr = SessionManager.getInstance();
+                    if (smgr.getActive() != null)
                     {
-                        if(resources_server_object.get_embedded()!=null)
+                        if (!smgr.getActive().isExpired())
                         {
-                            Resource[] resources_arr = resources_server_object.get_embedded().getResources();
+                            gson = new GsonBuilder().create();
+                            ArrayList<AbstractMap.SimpleEntry<String, String>> headers = new ArrayList<>();
+                            headers.add(new AbstractMap.SimpleEntry<>("Cookie", smgr.getActive().getSessionId()));
 
-                            resources = new HashMap();
-                            all_resources = new HashMap();
-                            if (resources_arr != null)
+                            //Get Timestamp
+                            String timestamp_json = RemoteComms
+                                    .sendGetRequest("/timestamp/resources_timestamp", headers);
+                            Counters cntr_timestamp = gson.fromJson(timestamp_json, Counters.class);
+                            if (cntr_timestamp != null)
                             {
-                                for (Resource res : resources_arr)
+                                timestamp = cntr_timestamp.getCount();
+                                filename = "resources_" + timestamp + ".dat";
+                                IO.log(this.getClass().getName(), IO.TAG_INFO, "Server Timestamp: " + timestamp);
+                            }
+                            else
+                            {
+                                IO.logAndAlert(this.getClass().getName(), "could not get valid timestamp", IO.TAG_ERROR);
+                                return null;
+                            }
+
+                            if (!isSerialized(ROOT_PATH + filename))
+                            {
+                                String resources_json = RemoteComms.sendGetRequest("/resources", headers);
+                                ResourceServerObject resources_server_object = gson.fromJson(resources_json, ResourceServerObject.class);
+
+                                if(resources_server_object!=null)
                                 {
-                                    all_resources.put(res.get_id(), res);
-                                    if (res.getDate_acquired() > 0)
-                                        resources.put(res.get_id(), res);
-                                    else IO.log(getClass().getName(), IO.TAG_WARN, "material [" + res + "] has not been approved yet. [date_acquired not set]");
-                                }
-                            } else IO.log(getClass().getName(), IO.TAG_WARN, "no resources found in database.");
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Resources in database.");
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "ResourceServerObject (containing Resource objects & other metadata) is null");
+                                    if(resources_server_object.get_embedded()!=null)
+                                    {
+                                        Resource[] resources_arr = resources_server_object.get_embedded().getResources();
+
+                                        resources = new HashMap();
+                                        all_resources = new HashMap();
+                                        if (resources_arr != null)
+                                        {
+                                            for (Resource res : resources_arr)
+                                            {
+                                                all_resources.put(res.get_id(), res);
+                                                if (res.getDate_acquired() > 0)
+                                                    resources.put(res.get_id(), res);
+                                                else IO.log(getClass().getName(), IO.TAG_WARN, "material [" + res + "] has not been approved yet. [date_acquired not set]");
+                                            }
+                                        } else IO.log(getClass().getName(), IO.TAG_WARN, "no resources found in database.");
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Resources in database.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "ResourceServerObject (containing Resource objects & other metadata) is null");
 
 
-                    String resource_types_json = RemoteComms.sendGetRequest("/resources/types", headers);
-                    ResourceTypeServerObject resourceTypeServerObject = gson.fromJson(resource_types_json, ResourceTypeServerObject.class);
-                    if(resourceTypeServerObject!=null)
-                    {
-                        if(resourceTypeServerObject.get_embedded()!=null)
-                        {
-                            ResourceType[] resource_types_arr = resourceTypeServerObject.get_embedded()
-                                    .getResource_types();
+                                String resource_types_json = RemoteComms.sendGetRequest("/resources/types", headers);
+                                ResourceTypeServerObject resourceTypeServerObject = gson.fromJson(resource_types_json, ResourceTypeServerObject.class);
+                                if(resourceTypeServerObject!=null)
+                                {
+                                    if(resourceTypeServerObject.get_embedded()!=null)
+                                    {
+                                        ResourceType[] resource_types_arr = resourceTypeServerObject.get_embedded()
+                                                .getResource_types();
 
-                            resource_types = new HashMap<>();
-                            for (ResourceType resource_type : resource_types_arr)
-                                resource_types.put(resource_type.get_id(), resource_type);
-                        } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Resource Types in the database.");
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "ResourceTypeServerObject (containing ResourceType objects & other metadata) is null");
+                                        resource_types = new HashMap<>();
+                                        for (ResourceType resource_type : resource_types_arr)
+                                            resource_types.put(resource_type.get_id(), resource_type);
+                                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "could not find any Resource Types in the database.");
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "ResourceTypeServerObject (containing ResourceType objects & other metadata) is null");
 
-                    IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of materials.");
+                                IO.log(getClass().getName(), IO.TAG_INFO, "reloaded collection of materials.");
 
-                    this.serialize(ROOT_PATH + filename, all_resources);
-                    this.serialize(ROOT_PATH + "resource_types.dat", resource_types);
-                } else
+                                serialize(ROOT_PATH + filename, all_resources);
+                                serialize(ROOT_PATH + "resource_types.dat", resource_types);
+                            } else
+                            {
+                                IO.log(this.getClass()
+                                        .getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
+                                all_resources = (HashMap<String, Resource>) deserialize(ROOT_PATH + filename);
+                                resource_types = (HashMap<String, ResourceType>) deserialize(ROOT_PATH + "resource_types.dat");
+
+                                resources = new HashMap<>();
+                                if (all_resources != null)
+                                {
+                                    for (Resource resource : all_resources.values())
+                                        if(resource.getDate_acquired() > 0)
+                                            resources.put(resource.get_id(), resource);
+                                } else IO.log(getClass().getName(), IO.TAG_ERROR, "serialized materials are null.");
+                            }
+                        } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
+                    } else IO.logAndAlert("Session Expired", "No active sessions.", IO.TAG_ERROR);
+                } catch (ClassNotFoundException e)
                 {
-                    IO.log(this.getClass()
-                            .getName(), IO.TAG_INFO, "binary object [" + ROOT_PATH + filename + "] on local disk is already up-to-date.");
-                    all_resources = (HashMap<String, Resource>) this.deserialize(ROOT_PATH + filename);
-                    resource_types = (HashMap<String, ResourceType>) this.deserialize(ROOT_PATH + "resource_types.dat");
-
-                    resources = new HashMap<>();
-                    if (all_resources != null)
-                    {
-                        for (Resource resource : all_resources.values())
-                            if(resource.getDate_acquired() > 0)
-                                resources.put(resource.get_id(), resource);
-                    } else IO.log(getClass().getName(), IO.TAG_ERROR, "serialized materials are null.");
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
+                } catch (IOException e)
+                {
+                    IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
                 }
-            } else IO.logAndAlert("Session Expired", "Active session has expired.", IO.TAG_ERROR);
-        } else IO.logAndAlert("Session Expired", "No active sessions.", IO.TAG_ERROR);
+                return null;
+            }
+        };
     }
 
     public void newResourceWindow(Callback callback)
@@ -406,29 +379,18 @@ public class ResourceManager extends MVGObjectManager
                 {
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
                     {
-                        //close stage
-                        stage.close();
-
                         IO.logAndAlert("Success", "Successfully created a new Resource!", IO.TAG_INFO);
-                        try
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
                         {
-                            //refresh model & view when material has been created.
-                            reloadDataFromServer();
-                        } catch (MalformedURLException ex)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-                        } catch (ClassNotFoundException e)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-                        } catch (IOException ex)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-                        }
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
                         if(callback!=null)
-                            callback.call(null);
+                            callback.call(IO.readStream(connection.getInputStream()));
                     } else
                     {
                         //Get error message
@@ -436,6 +398,10 @@ public class ResourceManager extends MVGObjectManager
                         //Gson gson = new GsonBuilder().create();
                         //Error error = gson.fromJson(msg, Error.class);
                         IO.logAndAlert("Error " +String.valueOf(connection.getResponseCode()), msg, IO.TAG_ERROR);
+
+                        //execute callback w/o args
+                        if(callback!=null)
+                            callback.call(null);
                     }
                 }
             } catch (IOException e)
@@ -460,12 +426,12 @@ public class ResourceManager extends MVGObjectManager
 
         //Setup scene and display
         Scene scene = new Scene(vbox);
-        File fCss = new File("src/fadulousbms/styles/home.css");
+        File fCss = new File("src/mvg/styles/home.css");
         scene.getStylesheets().clear();
         scene.getStylesheets().add("file:///"+ fCss.getAbsolutePath().replace("\\", "/"));
 
         stage.onHidingProperty().addListener((observable, oldValue, newValue) ->
-                loadDataFromServer());
+                forceSynchronise());
 
         stage.setScene(scene);
         stage.show();
@@ -541,30 +507,24 @@ public class ResourceManager extends MVGObjectManager
                     if(connection.getResponseCode()==HttpURLConnection.HTTP_OK)
                     {
                         IO.logAndAlert("Success", "Successfully added new material type!", IO.TAG_INFO);
-                        try
-                        {
-                            //refresh model & view when material type has been created.
-                            reloadDataFromServer();
-                        }catch (MalformedURLException ex)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                            IO.showMessage("URL Error", ex.getMessage(), IO.TAG_ERROR);
-                        }catch (ClassNotFoundException e)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, e.getMessage());
-                            IO.showMessage("ClassNotFoundException", e.getMessage(), IO.TAG_ERROR);
-                        }catch (IOException ex)
-                        {
-                            IO.log(getClass().getName(), IO.TAG_ERROR, ex.getMessage());
-                            IO.showMessage("I/O Error", ex.getMessage(), IO.TAG_ERROR);
-                        }
 
+                        //dismiss stage if successful
+                        Platform.runLater(() ->
+                        {
+                            if(stage!=null)
+                                if(stage.isShowing())
+                                    stage.close();
+                        });
+
+                        //execute callback w/ args
                         if(callback!=null)
-                            callback.call(null);
-                        stage.close();
+                            callback.call(IO.readStream(connection.getInputStream()));
                     } else
                     {
                         IO.logAndAlert( "ERROR_" + connection.getResponseCode(),  IO.readStream(connection.getErrorStream()), IO.TAG_ERROR);
+                        //execute callback w/o args
+                        if(callback!=null)
+                            callback.call(null);
                     }
                     connection.disconnect();
                 }
@@ -583,12 +543,12 @@ public class ResourceManager extends MVGObjectManager
 
         //Setup scene and display stage
         Scene scene = new Scene(vbox);
-        File fCss = new File("src/fadulousbms/styles/home.css");
+        File fCss = new File("src/mvg/styles/home.css");
         scene.getStylesheets().clear();
         scene.getStylesheets().add("file:///"+ fCss.getAbsolutePath().replace("\\", "/"));
 
         stage.onHidingProperty().addListener((observable, oldValue, newValue) ->
-                loadDataFromServer());
+                forceSynchronise());
 
         stage.setScene(scene);
         stage.show();

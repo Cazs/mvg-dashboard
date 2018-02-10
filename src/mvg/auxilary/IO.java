@@ -15,11 +15,7 @@ import mvg.managers.ScreenManager;
 import mvg.model.MVGObject;
 import mvg.model.Message;
 import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.stage.Stage;
+import org.controlsfx.control.NotificationPane;
 import org.controlsfx.control.Notifications;
 
 import java.awt.*;
@@ -140,37 +136,48 @@ public class IO<T extends MVGObject>
 
     public static void showMessage(String title, String msg, String type)
     {
+        NotificationPane notificationPane = new NotificationPane();
         Platform.runLater(() ->
         {
             switch (type.toLowerCase())
             {
                 case TAG_INFO:
-                    /*NotificationPane notificationPane = new NotificationPane();
-                    notificationPane.getStyleClass().add(NotificationPane.STYLE_CLASS_DARK);
-                    notificationPane.setShowFromTop(true);
-                    notificationPane.setText(msg);
+                    //notificationPane.getStyleClass().add(NotificationPane.STYLE_CLASS_DARK);
+                    //notificationPane.setText(msg);
                     //notificationPane.setGraphic(new Button("a button"));
-                    notificationPane.show();*/
+                    //notificationPane.show();
                     Notifications.create()
                             .title(title)
                             .text(msg)
                             .hideAfter(Duration.seconds(15))
                             .position(Pos.BOTTOM_LEFT)
+                            .owner(ScreenManager.getInstance())
                             .showInformation();
                     break;
                 case TAG_WARN:
+                    //notificationPane.getStyleClass().add(NotificationPane.STYLE_CLASS_DARK);
+                    //notificationPane.setShowFromTop(true);
+                    //notificationPane.setText(msg);
+                    //notificationPane.setGraphic(new Button("a button"));
+                    //notificationPane.show();
                     Notifications.create()
                             .title(title)
                             .text(msg)
-                            .hideAfter(Duration.seconds(30))
+                            .hideAfter(Duration.seconds(10))
+                            .owner(ScreenManager.getInstance())
                             .showWarning();
                     break;
                 case TAG_ERROR:
+                    //notificationPane.getStyleClass().add(NotificationPane.STYLE_CLASS_DARK);
+                    //notificationPane.setText(msg);
+                    //notificationPane.setGraphic(new Button("a button"));
+                    //notificationPane.show();
                     Notifications.create()
                             .title(title)
                             .text(msg)
                             .hideAfter(Duration.INDEFINITE)
                             .position(Pos.CENTER)
+                            .owner(ScreenManager.getInstance())
                             .showError();
                     break;
                 default:
